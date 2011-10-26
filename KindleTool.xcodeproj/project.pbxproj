@@ -1,0 +1,207 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		CEE4226814589F0C005E216E /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE4226714589F0C005E216E /* main.c */; };
+		CEE4226A14589F0C005E216E /* KindleTool.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = CEE4226914589F0C005E216E /* KindleTool.1 */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CEE4226114589F0C005E216E /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+				CEE4226A14589F0C005E216E /* KindleTool.1 in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		CEE4226314589F0C005E216E /* KindleTool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = KindleTool; sourceTree = BUILT_PRODUCTS_DIR; };
+		CEE4226714589F0C005E216E /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		CEE4226914589F0C005E216E /* KindleTool.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = KindleTool.1; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CEE4226014589F0C005E216E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CEE4225814589F0C005E216E = {
+			isa = PBXGroup;
+			children = (
+				CEE4226614589F0C005E216E /* KindleTool */,
+				CEE4226414589F0C005E216E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CEE4226414589F0C005E216E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CEE4226314589F0C005E216E /* KindleTool */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CEE4226614589F0C005E216E /* KindleTool */ = {
+			isa = PBXGroup;
+			children = (
+				CEE4226714589F0C005E216E /* main.c */,
+				CEE4226914589F0C005E216E /* KindleTool.1 */,
+			);
+			path = KindleTool;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CEE4226214589F0C005E216E /* KindleTool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CEE4226D14589F0C005E216E /* Build configuration list for PBXNativeTarget "KindleTool" */;
+			buildPhases = (
+				CEE4225F14589F0C005E216E /* Sources */,
+				CEE4226014589F0C005E216E /* Frameworks */,
+				CEE4226114589F0C005E216E /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KindleTool;
+			productName = KindleTool;
+			productReference = CEE4226314589F0C005E216E /* KindleTool */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CEE4225A14589F0C005E216E /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = CEE4225D14589F0C005E216E /* Build configuration list for PBXProject "KindleTool" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = CEE4225814589F0C005E216E;
+			productRefGroup = CEE4226414589F0C005E216E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CEE4226214589F0C005E216E /* KindleTool */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CEE4225F14589F0C005E216E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CEE4226814589F0C005E216E /* main.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		CEE4226B14589F0C005E216E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		CEE4226C14589F0C005E216E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		CEE4226E14589F0C005E216E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		CEE4226F14589F0C005E216E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CEE4225D14589F0C005E216E /* Build configuration list for PBXProject "KindleTool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CEE4226B14589F0C005E216E /* Debug */,
+				CEE4226C14589F0C005E216E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CEE4226D14589F0C005E216E /* Build configuration list for PBXNativeTarget "KindleTool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CEE4226E14589F0C005E216E /* Debug */,
+				CEE4226F14589F0C005E216E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CEE4225A14589F0C005E216E /* Project object */;
+}
