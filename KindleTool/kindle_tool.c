@@ -128,9 +128,21 @@ const char *convert_device_id(Device dev)
 
 int main (int argc, const char * argv[])
 {
-    FILE *input = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.bin", "r");
-    FILE *output = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz", "w");
-    FILE *output_sig = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz.sig", "w");
+    FILE *input, *output, *output_sig;
+    // Test OTA Update
+    input = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.bin", "r");
+    output = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.tgz", "w");
+    output_sig = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.tgz.sig", "w");
+    extract(input, output, output_sig);
+    // Test Manual Update
+    input = fopen("/Users/yifanlu/Development/Other/update_kindle_3.2.1.bin", "r");
+    output = fopen("/Users/yifanlu/Downloads/update_kindle_3.2.1.tgz", "w");
+    output_sig = fopen("/Users/yifanlu/Downloads/update_kindle_3.2.1.tgz.sig", "w");
+    extract(input, output, output_sig);
+    // Test V2 OTA Update
+    input = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.bin", "r");
+    output = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz", "w");
+    output_sig = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz.sig", "w");
     extract(input, output, output_sig);
     return 0;
 }
