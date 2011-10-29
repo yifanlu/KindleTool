@@ -151,6 +151,9 @@ const char *convert_device_id(Device dev)
 
 int main (int argc, const char * argv[])
 {
+    FILE *input = fopen("", "r");
+    FILE *output = fopen("", "w");
+    FILE *output_sig = fopen("", "w");
     extract(input, output, output_sig);
     return 0;
 }
