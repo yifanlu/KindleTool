@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CEE4226814589F0C005E216E /* kindle_tool.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE4226714589F0C005E216E /* kindle_tool.c */; };
 		CEE4226A14589F0C005E216E /* KindleTool.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = CEE4226914589F0C005E216E /* KindleTool.1 */; };
+		CEE42277145B818D005E216E /* extract.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE42276145B818D005E216E /* extract.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,9 @@
 		CEE4226314589F0C005E216E /* KindleTool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = KindleTool; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEE4226714589F0C005E216E /* kindle_tool.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = kindle_tool.c; sourceTree = "<group>"; };
 		CEE4226914589F0C005E216E /* KindleTool.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = KindleTool.1; sourceTree = "<group>"; };
+		CEE42274145B80F0005E216E /* extract.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = extract.h; path = ../extract.h; sourceTree = "<group>"; };
+		CEE42276145B818D005E216E /* extract.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extract.c; sourceTree = "<group>"; };
+		CEE42278145B82E0005E216E /* kindle_tool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kindle_tool.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,7 +64,10 @@
 		CEE4226614589F0C005E216E /* KindleTool */ = {
 			isa = PBXGroup;
 			children = (
+				CEE42274145B80F0005E216E /* extract.h */,
+				CEE42276145B818D005E216E /* extract.c */,
 				CEE4226714589F0C005E216E /* kindle_tool.c */,
+				CEE42278145B82E0005E216E /* kindle_tool.h */,
 				CEE4226914589F0C005E216E /* KindleTool.1 */,
 			);
 			path = KindleTool;
@@ -114,6 +121,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CEE4226814589F0C005E216E /* kindle_tool.c in Sources */,
+				CEE42277145B818D005E216E /* extract.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -200,6 +208,7 @@
 				CEE4226F14589F0C005E216E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
