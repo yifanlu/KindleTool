@@ -20,48 +20,15 @@
 #define MAGIC_NUMBER_LENGTH 4
 #define MD5_HASH_LENGTH 32
 
-#define OTA_UPDATE_BLOCK_SIZE 64
-#define RECOVERY_UPDATE_BLOCK_SIZE 131072
-#define UPDATE_SIGNATURE_BLOCK_SIZE 64
+#define OTA_UPDATE_BLOCK_SIZE 60
+#define OTA_UPDATE_V2_BLOCK_SIZE 18
+#define OTA_UPDATE_V2_PART_2_BLOCK_SIZE 36
+#define RECOVERY_UPDATE_BLOCK_SIZE 131068
+#define UPDATE_SIGNATURE_BLOCK_SIZE 60
 
 #define CERTIFICATE_DEV_SIZE 128
 #define CERTIFICATE_1K_SIZE 128
 #define CERTIFICATE_2K_SIZE 256
-
-typedef struct {
-    char magic_number[MAGIC_NUMBER_LENGTH];
-    unsigned char blocks[UPDATE_SIGNATURE_BLOCK_SIZE-MAGIC_NUMBER_LENGTH];
-} UpdateHeader;
-
-typedef struct {
-    char magic_number[MAGIC_NUMBER_LENGTH];
-    unsigned int certificate_number;
-} UpdateSignatureHeader;
-
-typedef struct {
-    char magic_number[MAGIC_NUMBER_LENGTH];
-    unsigned long source_revision;
-    unsigned long target_revision;
-    unsigned short num_devices;
-} OTAUpdateV2Header;
-
-typedef struct {
-    char magic_number[MAGIC_NUMBER_LENGTH];
-    unsigned int source_revision;
-    unsigned int target_revision;
-    unsigned short device;
-    unsigned char optional;
-    unsigned char unused;
-    unsigned char md5_sum[MD5_HASH_LENGTH];
-} OTAUpdateHeader;
-
-typedef struct {
-    OTAUpdateHeader update_header;
-    unsigned int magic_1;
-    unsigned int magic_2;
-    unsigned int minor;
-    unsigned int device;
-} RecoveryUpdateHeader;
 
 typedef enum {
     UpdateSignature,
@@ -75,7 +42,7 @@ typedef enum {
     CertificateDeveloper = 0x00,
     Certificate1K = 0x01,
     Certificate2K = 0x02,
-    CertificateUnknown = 0x00
+    CertificateUnknown = 0xFF
 } CertificateNumber;
 
 typedef enum {
@@ -93,12 +60,36 @@ typedef enum {
     KindleUnknown = 0x00
 } Device;
 
+typedef struct {
+    char magic_number[MAGIC_NUMBER_LENGTH];
+} UpdateHeader;
+
+typedef struct {
+    CertificateNumber certificate_number;
+} UpdateSignatureHeader;
+
+typedef struct {
+    unsigned int source_revision;
+    unsigned int target_revision;
+    unsigned short device;
+    unsigned char optional;
+    unsigned char unused;
+    unsigned char md5_sum[MD5_HASH_LENGTH];
+} OTAUpdateHeader;
+
+typedef struct {
+    unsigned char unused[12];
+    unsigned char md5_sum[MD5_HASH_LENGTH];
+    unsigned int magic_1;
+    unsigned int magic_2;
+    unsigned int minor;
+    unsigned int device;
+} RecoveryUpdateHeader;
+
 void md(unsigned char *, size_t);
 void dm(unsigned char *, size_t);
 int munger(FILE *, FILE *, size_t);
 int demunger(FILE *, FILE *, size_t);
-BundleVersion get_bundle_version(char*);
-int read_bundle_header(UpdateHeader *, FILE *);
 const char *convert_device_id(Device);
 
 #endif

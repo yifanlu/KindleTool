@@ -94,29 +94,6 @@ int demunger(FILE *input, FILE *output, size_t length)
 	return 0;
 }
 
-BundleVersion get_bundle_version(char magic_number[4])
-{
-    if(!strncmp(magic_number, "FB02", 4) || !strncmp(magic_number, "FB01", 4))
-        return RecoveryUpdate;
-    else if(!strncmp(magic_number, "FC02", 4) || !strncmp(magic_number, "FD03", 4))
-        return OTAUpdate;
-    else if(!strncmp(magic_number, "FC04", 4) || !strncmp(magic_number, "FD04", 4) || !strncmp(magic_number, "FL01", 4))
-        return OTAUpdateV2;
-    else if(!strncmp(magic_number, "SP01", 4))
-        return UpdateSignature;
-    else
-        return UnknownUpdate;
-}
-
-int read_bundle_header(UpdateHeader *header, FILE *input)
-{
-    if(fread(header, sizeof(UpdateHeader), 1, input) < 1 || ferror(input) != 0)
-    {
-        return -1;
-    }
-    return 0;
-}
-
 const char *convert_device_id(Device dev)
 {
     switch(dev)
@@ -151,9 +128,9 @@ const char *convert_device_id(Device dev)
 
 int main (int argc, const char * argv[])
 {
-    FILE *input = fopen("", "r");
-    FILE *output = fopen("", "w");
-    FILE *output_sig = fopen("", "w");
+    FILE *input = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.bin", "r");
+    FILE *output = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz", "w");
+    FILE *output_sig = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz.sig", "w");
     extract(input, output, output_sig);
     return 0;
 }
