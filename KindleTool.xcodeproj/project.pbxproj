@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CEE4226814589F0C005E216E /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE4226714589F0C005E216E /* main.c */; };
+		CEE4226814589F0C005E216E /* kindle_tool.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE4226714589F0C005E216E /* kindle_tool.c */; };
 		CEE4226A14589F0C005E216E /* KindleTool.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = CEE4226914589F0C005E216E /* KindleTool.1 */; };
 /* End PBXBuildFile section */
 
@@ -26,7 +26,7 @@
 
 /* Begin PBXFileReference section */
 		CEE4226314589F0C005E216E /* KindleTool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = KindleTool; sourceTree = BUILT_PRODUCTS_DIR; };
-		CEE4226714589F0C005E216E /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		CEE4226714589F0C005E216E /* kindle_tool.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = kindle_tool.c; sourceTree = "<group>"; };
 		CEE4226914589F0C005E216E /* KindleTool.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = KindleTool.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -60,7 +60,7 @@
 		CEE4226614589F0C005E216E /* KindleTool */ = {
 			isa = PBXGroup;
 			children = (
-				CEE4226714589F0C005E216E /* main.c */,
+				CEE4226714589F0C005E216E /* kindle_tool.c */,
 				CEE4226914589F0C005E216E /* KindleTool.1 */,
 			);
 			path = KindleTool;
@@ -113,7 +113,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CEE4226814589F0C005E216E /* main.c in Sources */,
+				CEE4226814589F0C005E216E /* kindle_tool.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
