@@ -14,6 +14,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <libtar.h>
+#include <unistd.h>
 #include <dirent.h>
 #include <openssl/md5.h>
 #include <openssl/evp.h>
@@ -37,6 +38,8 @@
 #define CERTIFICATE_DEV_SIZE 128
 #define CERTIFICATE_1K_SIZE 128
 #define CERTIFICATE_2K_SIZE 256
+
+#define INDEX_FILE_NAME "update-filelist.dat"
 
 typedef enum {
     UpdateSignature,
@@ -128,7 +131,11 @@ int extract_signature(FILE *, FILE *);
 int extract_ota_update(FILE *, FILE *);
 int extract_recovery(FILE *, FILE *);
 
-int sign_file(FILE *, FILE *, FILE *);
 int is_script(char *);
+int sign_file(FILE *, FILE *, FILE *);
+int kindle_create();
+int kindle_create_tar_from_directory(const char *, const char *, FILE *);
+int kindle_sign_and_add_files(DIR *, char *, FILE *, FILE *, TAR *);
+int kindle_create_from_tar(TAR *);
 
 #endif
