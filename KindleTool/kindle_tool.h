@@ -12,10 +12,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <libtar.h>
+#include <dirent.h>
+#include <openssl/md5.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
 
 //#define SWAPENDIAN(x) (((x>>24)&0xff) | ((x<<8)&0xff0000) | ((x>>8)&0xff00) | ((x<<24)&0xff000000))
 #define SWAPENDIAN(x) (x)
 #define BUFFER_SIZE 1024
+#define BLOCK_SIZE 64
 
 #define MAGIC_NUMBER_LENGTH 4
 #define MD5_HASH_LENGTH 32
@@ -56,7 +64,7 @@ typedef enum {
     Kindle3Wifi3G = 0x06,
     Kindle3Wifi3GEurope = 0x0A,
     Kindle4NonTouch = 0x0E,
-    Kindle4Touch = 0xFF,
+    Kindle4Touch = 0x0F,
     KindleUnknown = 0x00
 } Device;
 
@@ -86,10 +94,41 @@ typedef struct {
     unsigned int device;
 } RecoveryUpdateHeader;
 
+static const char *SIGN_KEY = 
+    "-----BEGIN RSA PRIVATE KEY-----\
+    MIICXgIBAAKBgQDJn1jWU+xxVv/eRKfCPR9e47lPWN2rH33z9QbfnqmCxBRLP6mM\
+    jGy6APyycQXg3nPi5fcb75alZo+Oh012HpMe9LnpeEgloIdm1E4LOsyrz4kttQtG\
+    RlzCErmBGt6+cAVEV86y2phOJ3mLk0Ek9UQXbIUfrvyJnS2MKLG2cczjlQIDAQAB\
+    AoGASLym1POD2kOznSERkF5yoc3vvXNmzORYkRk1eJkJuDY6yAbYiO7kDppqj4l8\
+    wGogTpv98OMXauY8JgQj6tgO5LkY2upttukDr8uhE2z9Dh7HMZV/rDYa+9rybJus\
+    RiAQDmF+VCzY2HirjpsSzgRu0r82NC8znNm2eGORys9BvmECQQDoIokOr0fYz3UT\
+    SbHfD3engXFPZ+JaJqU8xayR7C+Gp5I0CgSnCDTQVgdkVGbPuLVYiWDIcEaxjvVr\
+    hXYt2Ac9AkEA3lnERgg0RmWBC3K8toCyfDvr8eXao+xgUJ3lNWbqS0HtwxczwnIE\
+    H49IIDojbTnLUr3OitFMZuaJuT2MtWzTOQJBAK6GCHU54tJmZqbxqQEDJ/qPnxkM\
+    CWmt1F00YOH0qGacZZcqUQUjblGT3EraCdHyFKVT46fOgdfMm0cTOB6PZCECQQDI\
+    s5Zq8HTfJjg5MTQOOFTjtuLe0m9sj6zQl/WRInhRvgzzkDn0Rh5armaYUGIx8X0K\
+    DrIks4+XQnkGb/xWtwhhAkEA3FdnrsFiCNNJhvit2aTmtLzXxU46K+sV6NIY1tEJ\
+    G+RFzLRwO4IFDY4a/dooh1Yh1iFFGjcmpqza6tRutaw8zA==\
+    -----END RSA PRIVATE KEY-----\
+    ";
+
 void md(unsigned char *, size_t);
 void dm(unsigned char *, size_t);
 int munger(FILE *, FILE *, size_t);
 int demunger(FILE *, FILE *, size_t);
 const char *convert_device_id(Device);
+BundleVersion get_bundle_version(char*);
+int md5_sum(FILE *, char*);
+FILE *get_default_key();
+
+int read_bundle_header(UpdateHeader *, FILE *);
+int extract(FILE *, FILE *, FILE *);
+int extract_ota_update_v2(FILE *, FILE *);
+int extract_signature(FILE *, FILE *);
+int extract_ota_update(FILE *, FILE *);
+int extract_recovery(FILE *, FILE *);
+
+int sign_file(FILE *, FILE *, FILE *);
+int is_script(char *);
 
 #endif

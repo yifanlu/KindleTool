@@ -6,21 +6,7 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
-#include "extract.h"
-
-BundleVersion get_bundle_version(char magic_number[4])
-{
-    if(!strncmp(magic_number, "FB02", 4) || !strncmp(magic_number, "FB01", 4))
-        return RecoveryUpdate;
-    else if(!strncmp(magic_number, "FC02", 4) || !strncmp(magic_number, "FD03", 4))
-        return OTAUpdate;
-    else if(!strncmp(magic_number, "FC04", 4) || !strncmp(magic_number, "FD04", 4) || !strncmp(magic_number, "FL01", 4))
-        return OTAUpdateV2;
-    else if(!strncmp(magic_number, "SP01", 4))
-        return UpdateSignature;
-    else
-        return UnknownUpdate;
-}
+#include "kindle_tool.h"
 
 int read_bundle_header(UpdateHeader *header, FILE *input)
 {
@@ -156,6 +142,12 @@ int extract_ota_update_v2(FILE *input, FILE *output)
         return -1;
     }
     
+    if(output == NULL)
+    {
+        printf("%s\n", "No output found. Exiting.");
+        return 0;
+    }
+    
     // Now we can decrypt the data
     return demunger(input, output, 0);
 }
@@ -246,6 +238,12 @@ int extract_ota_update(FILE *input, FILE *output)
         return -1;
     }
     
+    if(output == NULL)
+    {
+        printf("%s\n", "No output found. Exiting.");
+        return 0;
+    }
+    
     return demunger(input, output, 0);
 }
 
@@ -270,5 +268,12 @@ int extract_recovery(FILE *input, FILE *output)
         fprintf(stderr, "Cannot read recovery update header!\n");
         return -1;
     }
+    
+    if(output == NULL)
+    {
+        printf("%s\n", "No output found. Exiting.");
+        return 0;
+    }
+    
     return demunger(input, output, 0);
 }

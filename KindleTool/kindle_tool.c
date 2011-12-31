@@ -7,7 +7,6 @@
 //
 
 #include "kindle_tool.h"
-#include "extract.h"
 
 void md(unsigned char *bytes, size_t length)
 {
@@ -30,10 +29,9 @@ void dm(unsigned char *bytes, size_t length)
 
 int munger(FILE *input, FILE *output, size_t length)
 {
-	unsigned char *bytes;
+	unsigned char bytes[BUFFER_SIZE];
 	size_t bytes_read;
 	size_t bytes_written;
-	bytes = malloc(BUFFER_SIZE);
 	while((bytes_read = fread(bytes, sizeof(char), (length < BUFFER_SIZE && length > 0 ? length : BUFFER_SIZE), input)) > 0)
 	{
 		md(bytes, bytes_read);
@@ -61,10 +59,9 @@ int munger(FILE *input, FILE *output, size_t length)
 
 int demunger(FILE *input, FILE *output, size_t length)
 {
-	unsigned char *bytes;
+	unsigned char bytes[BUFFER_SIZE];
 	size_t bytes_read;
 	size_t bytes_written;
-	bytes = malloc(BUFFER_SIZE);
 	while((bytes_read = fread(bytes, sizeof(char), (length < BUFFER_SIZE && length > 0 ? length : BUFFER_SIZE), input)) > 0)
 	{
 		dm(bytes, bytes_read);
@@ -72,13 +69,11 @@ int demunger(FILE *input, FILE *output, size_t length)
 		if(ferror(output) != 0)
 		{
 			fprintf(stderr, "Error munging, cannot write to output.\n");
-			free(bytes);
 			return -1;
 		}
 		else if(bytes_written < bytes_read)
 		{
 			fprintf(stderr, "Error munging, read %zu bytes but only wrote %zu bytes\n", bytes_read, bytes_written);
-			free(bytes);
 			return -1;
 		}
 		length -= bytes_read;
@@ -86,10 +81,8 @@ int demunger(FILE *input, FILE *output, size_t length)
 	if(ferror(input) != 0)
 	{
 		fprintf(stderr, "Error munging, cannot read input.\n");
-		free(bytes);
 		return -1;
 	}
-	free(bytes);
 	
 	return 0;
 }
@@ -126,9 +119,67 @@ const char *convert_device_id(Device dev)
     }
 }
 
+BundleVersion get_bundle_version(char magic_number[4])
+{
+    if(!strncmp(magic_number, "FB02", 4) || !strncmp(magic_number, "FB01", 4))
+        return RecoveryUpdate;
+    else if(!strncmp(magic_number, "FC02", 4) || !strncmp(magic_number, "FD03", 4))
+        return OTAUpdate;
+    else if(!strncmp(magic_number, "FC04", 4) || !strncmp(magic_number, "FD04", 4) || !strncmp(magic_number, "FL01", 4))
+        return OTAUpdateV2;
+    else if(!strncmp(magic_number, "SP01", 4))
+        return UpdateSignature;
+    else
+        return UnknownUpdate;
+}
+
+int md5_sum(FILE *input, char output_string[MD5_DIGEST_LENGTH*2+1])
+{
+    unsigned char bytes[BUFFER_SIZE];
+    size_t bytes_read;
+    MD5_CTX md5;
+    unsigned char output[MD5_DIGEST_LENGTH];
+    int i;
+    
+    MD5_Init(&md5);
+    while((bytes_read = fread(bytes, sizeof(char), BUFFER_SIZE, input)) > 0)
+    {
+        MD5_Update(&md5, bytes, bytes_read);
+    }
+    if(ferror(input) != 0)
+    {
+		fprintf(stderr, "Error reading input.\n");
+		return -1;
+    }
+    MD5_Final(output, &md5);
+    for(i = 0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        sprintf(output_string+(i*2), "%02x", bytes[i]);
+    }
+    output_string[MD5_DIGEST_LENGTH*2] = 0;
+    return 0;
+}
+
+FILE *get_default_key()
+{
+    static FILE *key_file;
+    if(key_file == NULL)
+    {
+        key_file = tmpfile();
+        fputs(SIGN_KEY, key_file);
+    }
+    rewind(key_file);
+    return key_file;
+}
+
 int main (int argc, const char * argv[])
 {
     FILE *input, *output, *output_sig;
+    input = fopen("/Users/yifanlu/Development/Other/kindle-touch-usbnet/installer.tgz", "r");
+    output = fopen("/Users/yifanlu/Development/Other/kindle-touch-usbnet/installer.bin", "w");
+    munger(input, output, 0);
+    return 0;
+    
     // Test OTA Update
     input = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.bin", "r");
     output = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.tgz", "w");
