@@ -154,26 +154,36 @@ int md5_sum(FILE *input, char output_string[MD5_DIGEST_LENGTH*2+1])
     MD5_Final(output, &md5);
     for(i = 0; i < MD5_DIGEST_LENGTH; i++)
     {
-        sprintf(output_string+(i*2), "%02x", bytes[i]);
+        sprintf(output_string+(i*2), "%02x", output[i]);
     }
     output_string[MD5_DIGEST_LENGTH*2] = 0;
     return 0;
 }
 
-FILE *get_default_key()
+RSA *get_default_key()
 {
-    static FILE *key_file;
-    if(key_file == NULL)
+    static RSA *rsa_pkey = NULL;
+    BIO *bio;
+    if(rsa_pkey == NULL)
     {
-        key_file = tmpfile();
-        fputs(SIGN_KEY, key_file);
+        bio = BIO_new_mem_buf((void*)SIGN_KEY, -1);
+        if(PEM_read_bio_RSAPrivateKey(bio, &rsa_pkey, NULL, NULL) == NULL)
+        {
+            fprintf(stderr, "Error loading RSA Private Key File\n");
+            return NULL;
+        }
     }
-    rewind(key_file);
-    return key_file;
+    return rsa_pkey;
 }
 
 int main (int argc, const char * argv[])
 {
+    const char *dirname = "/Users/yifanlu/Downloads/testupdate";
+    const char *tarname = "/Users/yifanlu/Downloads/testupdate.tar";
+    //BIO *in = BIO_new_file("/Users/yifanlu/Downloads/key.pem", "r");
+    kindle_create_tar_from_directory(dirname, tarname, get_default_key());
+    return 0;
+    /*
     FILE *input, *output, *output_sig;
     input = fopen("/Users/yifanlu/Development/Other/kindle-touch-usbnet/installer.tgz", "r");
     output = fopen("/Users/yifanlu/Development/Other/kindle-touch-usbnet/installer.bin", "w");
@@ -195,5 +205,6 @@ int main (int argc, const char * argv[])
     output = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz", "w");
     output_sig = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz.sig", "w");
     extract(input, output, output_sig);
-    return 0;
+     return 0;
+     */
 }
