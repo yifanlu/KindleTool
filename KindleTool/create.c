@@ -7,7 +7,6 @@
 //
 
 #include "kindle_tool.h"
-#include <errno.h>
 
 int is_script(char *filename)
 {
@@ -81,6 +80,15 @@ int kindle_create()
 	TAR *tar;
 	tar_open(&tar, "/tmp/test.tar", NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU);
     return 0;
+}
+
+int kindle_generate_update_header(BundleVersion type, const char *md5sum, )
+{
+    if(type == UpdateSignature)
+    {
+        fprintf(stderr, "Incorrect bundle version!");
+        return -1;
+    }
 }
 
 int kindle_create_tar_from_directory(const char *path, const char *tar_out_name, RSA *rsa_pkey)
@@ -291,7 +299,50 @@ on_error: // Yes, I know GOTOs are bad, but it's more readable than typing what'
     return -1;
 }
 
-int kindle_create_from_tar(TAR *tar)
+FILE *kindle_compress_tar(FILE *tar_input)
 {
-	return 0;
+    static char *temp_name = NULL;
+    gzFile gz_file;
+    unsigned char buffer[BUFFER_SIZE];
+    size_t count;
+    FILE *gz_input;
+    
+    // create a temporary file and open it in gzip
+    temp_name = tmpnam(temp_name);
+    if((gz_file = gzopen(temp_name, "wb")) == NULL)
+    {
+        fprintf(stderr, "Cannot create temporary file to compress input.\n");
+        return NULL;
+    }
+    // just to be safe, no compression
+    if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
+    {
+        fprintf(stderr, "Cannot set compression level for input.\n");
+        gzclose(gz_file);
+        return NULL;
+    }
+    // read the input and compress it
+    while((count = fread(buffer, sizeof(char), BUFFER_SIZE, tar_input)) > 0)
+    {
+        if(gzwrite(gz_file, buffer, (unsigned int)count) != count)
+        {
+            fprintf(stderr, "Cannot compress input.\n");
+            gzclose(gz_file);
+            return NULL;
+        }
+    }
+    if(ferror(tar_input) != 0)
+    {
+        fprintf(stderr, "Error reading input.\n");
+        gzclose(gz_file);
+        return NULL;
+    }
+    gzclose(gz_file);
+    // open the data we just compressed
+    if((gz_input = fopen(temp_name, "r")) == NULL)
+    {
+        fprintf(stderr, "Error reading input.\n");
+        return NULL;
+    }
+    return gz_input;
 }

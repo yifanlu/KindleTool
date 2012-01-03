@@ -111,8 +111,8 @@ const char *convert_device_id(Device dev)
             return "Kindle 3 Wifi+3G Europe";
         case Kindle4NonTouch:
             return "Kindle 4 Non-Touch";
-        case Kindle4Touch:
-            return "Kindle 4 Touch";
+        case Kindle5Touch:
+            return "Kindle 5 Touch";
         case KindleUnknown:
         default:
             return "Unknown";
@@ -176,35 +176,140 @@ RSA *get_default_key()
     return rsa_pkey;
 }
 
+int kindle_print_help()
+{
+    return 0;
+}
+
+int kindle_deobfuscate_main(int argc, const char *argv[])
+{
+    FILE *input;
+    FILE *output;
+    input = stdin;
+    output = stdout;
+    if(argc > 1)
+    {
+        if((output = fopen(argv[1], "wb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open output for writing.\n");
+            return -1;
+        }
+    }
+    if(argc > 0)
+    {
+        if((input = fopen(argv[0], "rb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open input for reading.\n");
+            return -1;
+        }
+    }
+    return munger(input, output, 0);
+}
+
+int kindle_obfuscate_main(int argc, const char *argv[])
+{
+    FILE *input;
+    FILE *output;
+    input = stdin;
+    output = stdout;
+    if(argc > 1)
+    {
+        if((output = fopen(argv[1], "wb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open output for writing.\n");
+            return -1;
+        }
+    }
+    if(argc > 0)
+    {
+        if((input = fopen(argv[0], "rb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open input for reading.\n");
+            return -1;
+        }
+    }
+    return demunger(input, output, 0);
+}
+
+int kindle_convert_main(int argc, const char *argv[])
+{
+    static const struct option opts[] = {
+        { "stdout", no_argument, NULL, 'c' },
+        { "info", no_argument, NULL, 'i' },
+        { "sig", required_argument, NULL, 's' }
+    };
+    int opt;
+    int opt_index;
+    FILE *input;
+    FILE *output;
+    FILE *sig_output;
+    const char *in_name;
+    char *out_name;
+
+    
+    if(argc < 1)
+    {
+        fprintf(stderr, "No input specified.\n");
+        return -1;
+    }
+    in_name = argv[0];
+    out_name = malloc(strlen(in_name) + 7);
+    strcpy(out_name, in_name);
+    strcat(out_name, ".tar.gz");
+    if((input = fopen(in_name, "rb")) == NULL)
+    {
+        fprintf(stderr, "Cannot open input for reading.\n");
+        free(out_name);
+        return -1;
+    }
+    if((output = fopen(out_name, "wb")) == NULL)
+    {
+        fprintf(stderr, "Cannot open output for writing.\n");
+        free(out_name);
+        return -1;
+    }
+    sig_output = NULL;
+    while((opt = getopt_long(argc, (char **)argv, "ics:", opts, &opt_index)) != -1)
+    {
+        switch(opt)
+        {
+            case 'i':
+                output = NULL;
+                break;
+            case 'c':
+                output = stdout;
+                break;
+            case 's':
+                if((sig_output = fopen(optarg, "wb")) == NULL)
+                {
+                    fprintf(stderr, "Cannot open signature output for writing.\n");
+                    free(out_name);
+                    return -1;
+                }
+            default:
+                break;
+        }
+    }
+    if(kindle_convert(input, output, sig_output) < 0)
+    {
+        fprintf(stderr, "Error converting update.\n");
+        free(out_name);
+        return -1;
+    }
+    if(output != stdout)
+        remove(in_name);
+    free(out_name);
+    return 0;
+}
+
 int main (int argc, const char * argv[])
 {
-    const char *dirname = "/Users/yifanlu/Downloads/testupdate";
-    const char *tarname = "/Users/yifanlu/Downloads/testupdate.tar";
-    //BIO *in = BIO_new_file("/Users/yifanlu/Downloads/key.pem", "r");
-    kindle_create_tar_from_directory(dirname, tarname, get_default_key());
-    return 0;
-    /*
-    FILE *input, *output, *output_sig;
-    input = fopen("/Users/yifanlu/Development/Other/kindle-touch-usbnet/installer.tgz", "r");
-    output = fopen("/Users/yifanlu/Development/Other/kindle-touch-usbnet/installer.bin", "w");
-    munger(input, output, 0);
-    return 0;
-    
-    // Test OTA Update
-    input = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.bin", "r");
-    output = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.tgz", "w");
-    output_sig = fopen("/Users/yifanlu/Downloads/Update_kindle_3.3_B006.tgz.sig", "w");
-    extract(input, output, output_sig);
-    // Test Manual Update
-    input = fopen("/Users/yifanlu/Development/Other/update_kindle_3.2.1.bin", "r");
-    output = fopen("/Users/yifanlu/Downloads/update_kindle_3.2.1.tgz", "w");
-    output_sig = fopen("/Users/yifanlu/Downloads/update_kindle_3.2.1.tgz.sig", "w");
-    extract(input, output, output_sig);
-    // Test V2 OTA Update
-    input = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.bin", "r");
-    output = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz", "w");
-    output_sig = fopen("/Users/yifanlu/Downloads/Update_Kindle_4.0.1_B00E.tgz.sig", "w");
-    extract(input, output, output_sig);
-     return 0;
-     */
+    if(argc < 2 || strncmp(argv[0], "help", 4) == 0)
+        return kindle_print_help();
+    if(strncmp(argv[0], "dm", 2) == 0)
+        return kindle_deobfuscate_main(argc--, (&argv)[1]);
+    if(strncmp(argv[0], "md", 2) == 0)
+        return kindle_obfuscate_main(argc--, (&argv)[1]);
+    if(strncmp(argv[0], "convert", 2) == 0)
+        return kindle_convert_main(argc--, (&argv)[1]);
 }

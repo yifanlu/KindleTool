@@ -10,7 +10,7 @@
 		CE1DABEC14AF9C1E003B5CBA /* create.c in Sources */ = {isa = PBXBuildFile; fileRef = CE1DABEB14AF9C1E003B5CBA /* create.c */; };
 		CEE4226814589F0C005E216E /* kindle_tool.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE4226714589F0C005E216E /* kindle_tool.c */; };
 		CEE4226A14589F0C005E216E /* KindleTool.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = CEE4226914589F0C005E216E /* KindleTool.1 */; };
-		CEE42277145B818D005E216E /* extract.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE42276145B818D005E216E /* extract.c */; };
+		CEE42277145B818D005E216E /* convert.c in Sources */ = {isa = PBXBuildFile; fileRef = CEE42276145B818D005E216E /* convert.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,7 +31,7 @@
 		CEE4226314589F0C005E216E /* KindleTool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = KindleTool; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEE4226714589F0C005E216E /* kindle_tool.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = kindle_tool.c; sourceTree = "<group>"; };
 		CEE4226914589F0C005E216E /* KindleTool.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = KindleTool.1; sourceTree = "<group>"; };
-		CEE42276145B818D005E216E /* extract.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extract.c; sourceTree = "<group>"; };
+		CEE42276145B818D005E216E /* convert.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = convert.c; sourceTree = "<group>"; };
 		CEE42278145B82E0005E216E /* kindle_tool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kindle_tool.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -65,7 +65,7 @@
 		CEE4226614589F0C005E216E /* KindleTool */ = {
 			isa = PBXGroup;
 			children = (
-				CEE42276145B818D005E216E /* extract.c */,
+				CEE42276145B818D005E216E /* convert.c */,
 				CE1DABEB14AF9C1E003B5CBA /* create.c */,
 				CEE42278145B82E0005E216E /* kindle_tool.h */,
 				CEE4226714589F0C005E216E /* kindle_tool.c */,
@@ -125,7 +125,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CEE4226814589F0C005E216E /* kindle_tool.c in Sources */,
-				CEE42277145B818D005E216E /* extract.c in Sources */,
+				CEE42277145B818D005E216E /* convert.c in Sources */,
 				CE1DABEC14AF9C1E003B5CBA /* create.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -161,6 +161,7 @@
 				OTHER_LDFLAGS = (
 					"-ltar",
 					"-lcrypto",
+					"-lz",
 				);
 				SDKROOT = macosx;
 			};
@@ -187,6 +188,7 @@
 				OTHER_LDFLAGS = (
 					"-ltar",
 					"-lcrypto",
+					"-lz",
 				);
 				SDKROOT = macosx;
 			};

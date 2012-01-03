@@ -9,18 +9,20 @@
 #ifndef KINDLETOOL
 #define KINDLETOOL
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <libtar.h>
-#include <unistd.h>
+#include <errno.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <libtar.h>
 #include <openssl/md5.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
-#include <openssl/err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zlib.h>
 
 //#define SWAPENDIAN(x) (((x>>24)&0xff) | ((x<<8)&0xff0000) | ((x>>8)&0xff00) | ((x<<24)&0xff000000))
 #define SWAPENDIAN(x) (x)
@@ -69,7 +71,7 @@ typedef enum {
     Kindle3Wifi3G = 0x06,
     Kindle3Wifi3GEurope = 0x0A,
     Kindle4NonTouch = 0x0E,
-    Kindle4Touch = 0x0F,
+    Kindle5Touch = 0x0F,
     KindleUnknown = 0x00
 } Device;
 
@@ -125,18 +127,18 @@ BundleVersion get_bundle_version(char*);
 int md5_sum(FILE *, char*);
 RSA *get_default_key();
 
-int read_bundle_header(UpdateHeader *, FILE *);
-int extract(FILE *, FILE *, FILE *);
-int extract_ota_update_v2(FILE *, FILE *);
-int extract_signature(FILE *, FILE *);
-int extract_ota_update(FILE *, FILE *);
-int extract_recovery(FILE *, FILE *);
+int kindle_read_bundle_header(UpdateHeader *, FILE *);
+int kindle_convert(FILE *, FILE *, FILE *);
+int kindle_convert_ota_update_v2(FILE *, FILE *);
+int kindle_convert_signature(FILE *, FILE *);
+int kindle_convert_ota_update(FILE *, FILE *);
+int kindle_convert_recovery(FILE *, FILE *);
 
 int is_script(char *);
 int sign_file(FILE *, RSA *, FILE *);
 int kindle_create();
 int kindle_create_tar_from_directory(const char *, const char *, RSA *);
 int kindle_sign_and_add_files(DIR *, char *, RSA *, FILE *, TAR *);
-int kindle_create_from_tar(TAR *);
+FILE *kindle_compress_tar(FILE *);
 
 #endif
