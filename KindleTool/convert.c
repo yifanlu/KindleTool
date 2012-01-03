@@ -71,15 +71,15 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
 {
     void *data;
     int index;
-    unsigned long source_revision;
-    unsigned long target_revision;
-    unsigned short num_devices;
-    unsigned short device;
-    //unsigned short *devices;
-    unsigned short critical;
+    uint64_t source_revision;
+    uint64_t target_revision;
+    uint16_t num_devices;
+    uint16_t device;
+    //uint16_t *devices;
+    uint16_t critical;
     unsigned char *md5_sum;
-    unsigned short num_metadata;
-    unsigned short metastring_length;
+    uint16_t num_metadata;
+    uint16_t metastring_length;
     char *metastring;
     //unsigned char **metastrings;
     
@@ -88,23 +88,23 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     fread(data, sizeof(char), OTA_UPDATE_V2_BLOCK_SIZE, input);
     index = 0;
     
-    source_revision = *(unsigned long *)&data[index];
-    index += sizeof(unsigned long);
-    printf("Minimum OTA    %lu\n", SWAPENDIAN(source_revision));
-    target_revision = *(unsigned long *)&data[index];
-    index += sizeof(unsigned long);
-    printf("Target OTA     %lu\n", SWAPENDIAN(target_revision));
-    num_devices = *(unsigned short *)&data[index];
-    index += sizeof(unsigned short);
+    source_revision = *(uint64_t *)&data[index];
+    index += sizeof(uint64_t);
+    printf("Minimum OTA    %llu\n", SWAPENDIAN(source_revision));
+    target_revision = *(uint64_t *)&data[index];
+    index += sizeof(uint64_t);
+    printf("Target OTA     %llu\n", SWAPENDIAN(target_revision));
+    num_devices = *(uint16_t *)&data[index];
+    index += sizeof(uint16_t);
     printf("Devices        %hd\n", SWAPENDIAN(num_devices));
     free(data);
     
     // Now get the data 
-    data = malloc(num_devices * sizeof(unsigned short));
-    fread(data, sizeof(unsigned short), num_devices, input);
-    for(index = 0; index < num_devices * sizeof(unsigned short); index += sizeof(unsigned short))
+    data = malloc(num_devices * sizeof(uint16_t));
+    fread(data, sizeof(uint16_t), num_devices, input);
+    for(index = 0; index < num_devices * sizeof(uint16_t); index += sizeof(uint16_t))
     {
-        device = *(unsigned short *)&data[index];
+        device = *(uint16_t *)&data[index];
         printf("Device         %s\n", convert_device_id(SWAPENDIAN(device)));
     }
     free(data);
@@ -114,22 +114,22 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     fread(data, sizeof(char), OTA_UPDATE_V2_PART_2_BLOCK_SIZE, input);
     index = 0;
     
-    critical = *(unsigned short *)&data[index];
-    index += sizeof(unsigned short);
+    critical = *(uint16_t *)&data[index];
+    index += sizeof(uint16_t);
     printf("Critical       %hd\n", SWAPENDIAN(num_devices));
     md5_sum = &data[index];
     dm(md5_sum, MD5_HASH_LENGTH);
     index += MD5_HASH_LENGTH;
     printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, md5_sum);
-    num_metadata = *(unsigned short *)&data[index];
-    index += sizeof(unsigned short);
+    num_metadata = *(uint16_t *)&data[index];
+    index += sizeof(uint16_t);
     printf("Metadata       %hd\n", SWAPENDIAN(num_metadata));
     free(data);
     
     // Finally, get the metastrings
     for(index = 0; index < num_metadata; index++)
     {
-        fread(&metastring_length, sizeof(unsigned short), 1, input);
+        fread(&metastring_length, sizeof(uint16_t), 1, input);
         metastring = malloc(metastring_length);
         fread(metastring, sizeof(char), metastring_length, input);
         printf("Metastring     %.*s\n", metastring_length, metastring);

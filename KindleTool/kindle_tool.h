@@ -14,10 +14,12 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <libtar.h>
+#include <limits.h>
 #include <openssl/md5.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +73,8 @@ typedef enum {
     Kindle3Wifi3G = 0x06,
     Kindle3Wifi3GEurope = 0x0A,
     Kindle4NonTouch = 0x0E,
-    Kindle5Touch = 0x0F,
+    Kindle5TouchWifi3G = 0x0F,
+    Kindle5TouchWifi = 0x10,
     KindleUnknown = 0x00
 } Device;
 
@@ -84,9 +87,9 @@ typedef struct {
 } UpdateSignatureHeader;
 
 typedef struct {
-    unsigned int source_revision;
-    unsigned int target_revision;
-    unsigned short device;
+    uint32_t source_revision;
+    uint32_t target_revision;
+    uint16_t device;
     unsigned char optional;
     unsigned char unused;
     unsigned char md5_sum[MD5_HASH_LENGTH];
@@ -95,11 +98,28 @@ typedef struct {
 typedef struct {
     unsigned char unused[12];
     unsigned char md5_sum[MD5_HASH_LENGTH];
-    unsigned int magic_1;
-    unsigned int magic_2;
-    unsigned int minor;
-    unsigned int device;
+    uint32_t magic_1;
+    uint32_t magic_2;
+    uint32_t minor;
+    uint32_t device;
 } RecoveryUpdateHeader;
+
+typedef struct {
+    UpdateHeader header;
+    BundleVersion version;
+    uint64_t source_revision;
+    uint64_t target_revision;
+    uint32_t magic_1;
+    uint32_t magic_2;
+    uint32_t minor;
+    int num_devices;
+    Device *devices;
+    CertificateNumber certificate_number;
+    unsigned char optional;
+    unsigned char critical;
+    int num_meta;
+    char **metastrings;
+} UpdateInformation;
 
 static const char SIGN_KEY[] = 
     "-----BEGIN RSA PRIVATE KEY-----\n"

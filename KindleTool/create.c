@@ -23,7 +23,7 @@ int sign_file(FILE *in_file, RSA *rsa_pkey, FILE *sigout_file)
     unsigned char buffer[BUFFER_SIZE];
     size_t len;
     unsigned char *sig;
-    unsigned int siglen;
+    uint32_t siglen;
     pkey = EVP_PKEY_new();
     
     if(EVP_PKEY_set1_RSA(pkey, rsa_pkey) == 0)
@@ -81,14 +81,6 @@ int kindle_create()
 	tar_open(&tar, "/tmp/test.tar", NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU);
     return 0;
 }
-
-int kindle_generate_update_header(BundleVersion type, const char *md5sum, )
-{
-    if(type == UpdateSignature)
-    {
-        fprintf(stderr, "Incorrect bundle version!");
-        return -1;
-    }
 }
 
 int kindle_create_tar_from_directory(const char *path, const char *tar_out_name, RSA *rsa_pkey)
@@ -168,17 +160,19 @@ int kindle_create_tar_from_directory(const char *path, const char *tar_out_name,
 
 int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE *out_index, TAR *out_tar)
 {
+    static char *temp_sig;
     size_t pathlen;
 	struct dirent *ent = NULL;
 	struct stat st;
 	DIR *next = NULL;
 	char *absname = NULL;
     char *signame = NULL;
-    char *signamerel = NULL;
     FILE *file = NULL;
     FILE *sigfile = NULL;
     char md5[MD5_DIGEST_LENGTH*2+1];
 	
+    if(temp_sig == NULL)
+        temp_sig = tmpnam(temp_sig);
 	while ((ent = readdir (dir)) != NULL)
 	{
         pathlen = strlen(dirname) + strlen(ent->d_name);
@@ -239,8 +233,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
             signame[0] = 0;
             strcat(signame, absname);
             strcat(signame, ".sig\0");
-            signamerel = signame+strlen(dirname);
-            if((sigfile = fopen(signamerel, "w")) == NULL) // we want a rel path, signame is abs since tar wants abs
+            if((sigfile = fopen(temp_sig, "w")) == NULL) // we want a rel path, signame is abs since tar wants abs
             {
                 fprintf(stderr, "Cannot create signature file %s\n", signame);
                 goto on_error;
@@ -274,13 +267,11 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
             }
 			// add sig to tar
             fclose(sigfile);
-            if(tar_append_file(out_tar, signamerel, signame) < 0)
+            if(tar_append_file(out_tar, temp_sig, signame) < 0)
             {
                 fprintf(stderr, "Cannot add %s to tar archive.\n", signame);
                 goto on_error;
             }
-            // clean up
-            remove(signamerel);
 		}
 	}
 	chdir("..");
@@ -324,7 +315,7 @@ FILE *kindle_compress_tar(FILE *tar_input)
     // read the input and compress it
     while((count = fread(buffer, sizeof(char), BUFFER_SIZE, tar_input)) > 0)
     {
-        if(gzwrite(gz_file, buffer, (unsigned int)count) != count)
+        if(gzwrite(gz_file, buffer, (uint32_t)count) != count)
         {
             fprintf(stderr, "Cannot compress input.\n");
             gzclose(gz_file);
