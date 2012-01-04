@@ -19,14 +19,14 @@ int kindle_read_bundle_header(UpdateHeader *header, FILE *input)
 
 int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
 {
-    UpdateHeader abstract_header;
+    UpdateHeader header;
     BundleVersion bundle_version;
-    if(kindle_read_bundle_header(&abstract_header, input) < 0)
+    if(kindle_read_bundle_header(&header, input) < 0)
     {
         fprintf(stderr, "Cannot read input file.\n");
         return -1;
     }
-    bundle_version = get_bundle_version(abstract_header.magic_number);
+    bundle_version = get_bundle_version(header.magic_number);
     switch(bundle_version)
     {
         case OTAUpdateV2:
@@ -64,7 +64,7 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     uint16_t device;
     //uint16_t *devices;
     uint16_t critical;
-    unsigned char *md5_sum;
+    char *md5_sum;
     uint16_t num_metadata;
     uint16_t metastring_length;
     char *metastring;
@@ -105,7 +105,7 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     index += sizeof(uint16_t);
     printf("Critical       %hd\n", num_devices);
     md5_sum = &data[index];
-    dm(md5_sum, MD5_HASH_LENGTH);
+    dm((unsigned char*)md5_sum, MD5_HASH_LENGTH);
     index += MD5_HASH_LENGTH;
     printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, md5_sum);
     num_metadata = *(uint16_t *)&data[index];
@@ -205,7 +205,7 @@ int kindle_convert_ota_update(UpdateHeader *header, FILE *input, FILE *output)
         fprintf(stderr, "Cannot read OTA header.\n");
         return -1;
     }
-    dm(header->data.ota_update.md5_sum, MD5_HASH_LENGTH);
+    dm((unsigned char*)header->data.ota_update.md5_sum, MD5_HASH_LENGTH);
     printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, header->data.ota_update.md5_sum);
     printf("Minimum OTA    %d\n", header->data.ota_update.source_revision);
     printf("Target OTA     %d\n", header->data.ota_update.target_revision);
@@ -228,7 +228,7 @@ int kindle_convert_recovery(UpdateHeader *header, FILE *input, FILE *output)
         fprintf(stderr, "Cannot read recovery update header.\n");
         return -1;
     }
-    dm(header->data.recovery_update.md5_sum, MD5_HASH_LENGTH);
+    dm((unsigned char*)header->data.recovery_update.md5_sum, MD5_HASH_LENGTH);
     printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, header->data.recovery_update.md5_sum);
     printf("Magic 1        %d\n", header->data.recovery_update.magic_1);
     printf("Magic 2        %d\n", header->data.recovery_update.magic_2);

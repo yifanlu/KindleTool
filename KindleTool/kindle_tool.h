@@ -80,6 +80,28 @@ typedef enum {
 } Device;
 
 typedef struct {
+    CertificateNumber certificate_number;
+} UpdateSignatureHeader;
+
+typedef struct {
+    uint32_t source_revision;
+    uint32_t target_revision;
+    uint16_t device;
+    unsigned char optional;
+    unsigned char unused;
+    char md5_sum[MD5_HASH_LENGTH];
+} OTAUpdateHeader;
+
+typedef struct {
+    unsigned char unused[12];
+    char md5_sum[MD5_HASH_LENGTH];
+    uint32_t magic_1;
+    uint32_t magic_2;
+    uint32_t minor;
+    uint32_t device;
+} RecoveryUpdateHeader;
+
+typedef struct {
     char magic_number[MAGIC_NUMBER_LENGTH];
 	union {
 		OTAUpdateHeader ota_update;
@@ -90,28 +112,6 @@ typedef struct {
 		unsigned char recovery_header_data[RECOVERY_UPDATE_BLOCK_SIZE];
 	} data;
 } UpdateHeader;
-
-typedef struct {
-    CertificateNumber certificate_number;
-} UpdateSignatureHeader;
-
-typedef struct {
-    uint32_t source_revision;
-    uint32_t target_revision;
-    uint16_t device;
-    unsigned char optional;
-    unsigned char unused;
-    unsigned char md5_sum[MD5_HASH_LENGTH];
-} OTAUpdateHeader;
-
-typedef struct {
-    unsigned char unused[12];
-    unsigned char md5_sum[MD5_HASH_LENGTH];
-    uint32_t magic_1;
-    uint32_t magic_2;
-    uint32_t minor;
-    uint32_t device;
-} RecoveryUpdateHeader;
 
 typedef struct {
     char magic_number[MAGIC_NUMBER_LENGTH];
@@ -160,9 +160,9 @@ RSA *get_default_key();
 int kindle_read_bundle_header(UpdateHeader *, FILE *);
 int kindle_convert(FILE *, FILE *, FILE *);
 int kindle_convert_ota_update_v2(FILE *, FILE *);
-int kindle_convert_signature(FILE *, FILE *);
-int kindle_convert_ota_update(FILE *, FILE *);
-int kindle_convert_recovery(FILE *, FILE *);
+int kindle_convert_signature(UpdateHeader *, FILE *, FILE *);
+int kindle_convert_ota_update(UpdateHeader *, FILE *, FILE *);
+int kindle_convert_recovery(UpdateHeader *, FILE *, FILE *);
 
 int is_script(char *);
 int sign_file(FILE *, RSA *, FILE *);

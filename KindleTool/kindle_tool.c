@@ -135,7 +135,7 @@ BundleVersion get_bundle_version(char magic_number[4])
         return UnknownUpdate;
 }
 
-int md5_sum(FILE *input, char output_string[MD5_DIGEST_LENGTH*2+1])
+int md5_sum(FILE *input, char output_string[MD5_HASH_LENGTH])
 {
     unsigned char bytes[BUFFER_SIZE];
     size_t bytes_read;
@@ -158,7 +158,6 @@ int md5_sum(FILE *input, char output_string[MD5_DIGEST_LENGTH*2+1])
     {
         sprintf(output_string+(i*2), "%02x", output[i]);
     }
-    output_string[MD5_DIGEST_LENGTH*2] = 0;
     return 0;
 }
 
@@ -417,7 +416,7 @@ int kindle_create_main(int argc, char *argv[])
                 }
                 break;
             case 'b':
-                strncpy((char *)&info.header, optarg, 4);
+                strncpy(info.magic_number, optarg, 4);
                 break;
             case 's':
                 info.source_revision = atol(optarg);

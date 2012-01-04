@@ -161,7 +161,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
     char *signame = NULL;
     FILE *file = NULL;
     FILE *sigfile = NULL;
-    char md5[MD5_DIGEST_LENGTH*2+1];
+    char md5[MD5_HASH_LENGTH+1];
 	
     if(temp_sig == NULL)
         temp_sig = tmpnam(temp_sig);
@@ -219,6 +219,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
                 fprintf(stderr, "Cannot calculate hash sum for %s\n", absname);
                 goto on_error;
             }
+            md5[MD5_HASH_LENGTH] = 0;
             rewind(file);
 			// use openssl to sign file
             signame = realloc(signame, strlen(absname) + 5);
@@ -430,8 +431,8 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
         return -1;
     }
     rewind(input_tgz); // reset input for later reading
-    md(&header[index], MD5_HASH_LENGTH*2); // obfuscate md5 hash
-    index += MD5_HASH_LENGTH*2;
+    md(&header[index], MD5_HASH_LENGTH); // obfuscate md5 hash
+    index += MD5_HASH_LENGTH;
     header[index] = (uint16_t)info->num_meta; // num meta
     
     // next, we write the meta strings
@@ -485,13 +486,55 @@ int kindle_create_ota_update(UpdateInformation *info, FILE *input_tgz, FILE *out
 	UpdateHeader header;
 	
 	memset(&header, 0, sizeof(UpdateHeader)); // set them to zero
-	header.magic_number = info->magic_number; // magic number
-	header.data.ota_update.source_revision = info->source_revision;
-	
-    return 0;
+	strncpy(header.magic_number, info->magic_number, 4); // magic number
+	header.data.ota_update.source_revision = (uint32_t)info->source_revision; // source
+    header.data.ota_update.target_revision = (uint32_t)info->target_revision; // target
+    header.data.ota_update.device = (uint16_t)info->devices[0]; // device
+    header.data.ota_update.optional = (unsigned char)info->optional; // optional
+    if(md5_sum(input_tgz, header.data.ota_update.md5_sum) < 0)
+    {
+        fprintf(stderr, "Error calculating MD5 of input tgz.\n");
+        return -1;
+    }
+    rewind(input_tgz); // rewind input
+    md((unsigned char*)header.data.ota_update.md5_sum, MD5_HASH_LENGTH); // obfuscate md5 hash
+    
+    // write header to output
+    if(fwrite(&header, sizeof(char), MAGIC_NUMBER_LENGTH+OTA_UPDATE_BLOCK_SIZE, output) < MAGIC_NUMBER_LENGTH+OTA_UPDATE_BLOCK_SIZE)
+    {
+        fprintf(stderr, "Error writing update header.\n");
+        return -1;
+    }
+    
+    // write package to output
+    return munger(input_tgz, output, 0);
 }
 
 int kindle_create_recovery(UpdateInformation *info, FILE *input_tgz, FILE *output)
 {
-    return 0;
+    UpdateHeader header;
+	
+	memset(&header, 0, sizeof(UpdateHeader)); // set them to zero
+	strncpy(header.magic_number, info->magic_number, 4); // magic number
+	header.data.recovery_update.magic_1 = (uint32_t)info->magic_1; // magic 1
+    header.data.recovery_update.magic_2 = (uint32_t)info->magic_2; // magic 2
+    header.data.recovery_update.minor = (uint32_t)info->minor; // minor
+    header.data.recovery_update.device = (uint32_t)info->devices[0]; // device
+    if(md5_sum(input_tgz, header.data.recovery_update.md5_sum) < 0)
+    {
+        fprintf(stderr, "Error calculating MD5 of input tgz.\n");
+        return -1;
+    }
+    rewind(input_tgz); // rewind input
+    md((unsigned char*)header.data.recovery_update.md5_sum, MD5_HASH_LENGTH); // obfuscate md5 hash
+    
+    // write header to output
+    if(fwrite(&header, sizeof(char), MAGIC_NUMBER_LENGTH+RECOVERY_UPDATE_BLOCK_SIZE, output) < MAGIC_NUMBER_LENGTH+RECOVERY_UPDATE_BLOCK_SIZE)
+    {
+        fprintf(stderr, "Error writing update header.\n");
+        return -1;
+    }
+    
+    // write package to output
+    return munger(input_tgz, output, 0);
 }
