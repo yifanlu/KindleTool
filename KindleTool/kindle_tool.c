@@ -346,7 +346,7 @@ int kindle_create_main(int argc, char *argv[])
     if(strncmp(argv[0], "ota", 3) == 0)
     {
         info.version = OTAUpdate;
-        strncpy((char *)&info.header, "FB02", 4);
+        strncpy(info.magic_number, "FB02", 4);
     }
     else if(strncmp(argv[0], "ota2", 4) == 0)
     {
@@ -355,7 +355,7 @@ int kindle_create_main(int argc, char *argv[])
     else if(strncmp(argv[0], "recovery", 8) == 0)
     {
         info.version = RecoveryUpdate;
-        strncpy((char *)&info.header, "FC02", 4);
+        strncpy(info.magic_number, "FC02", 4);
     }
     else
     {
@@ -391,17 +391,17 @@ int kindle_create_main(int argc, char *argv[])
                 else if(strncmp(optarg, "k4", 2) == 0)
                 {
                     info.devices[info.num_devices-1] = Kindle4NonTouch;
-                    strncpy((char *)&info.header, "FC04", 4);
+                    strncpy(info.magic_number, "FC04", 4);
                 }
                 else if(strncmp(optarg, "k5w", 3) == 0)
                 {
                     info.devices[info.num_devices-1] = Kindle5TouchWifi;
-                    strncpy((char *)&info.header, "FD04", 4);
+                    strncpy(info.magic_number, "FD04", 4);
                 }
                 else if(strncmp(optarg, "k5", 2) == 0)
                 {
                     info.devices[info.num_devices-1] = Kindle5TouchWifi3G;
-                    strncpy((char *)&info.header, "FD04", 4);
+                    strncpy(info.magic_number, "FD04", 4);
                 }
                 else
                 {

@@ -81,6 +81,14 @@ typedef enum {
 
 typedef struct {
     char magic_number[MAGIC_NUMBER_LENGTH];
+	union {
+		OTAUpdateHeader ota_update;
+		RecoveryUpdateHeader recovery_update;
+		UpdateSignatureHeader signature;
+		unsigned char ota_header_data[OTA_UPDATE_BLOCK_SIZE];
+		unsigned char signature_header_data[UPDATE_SIGNATURE_BLOCK_SIZE];
+		unsigned char recovery_header_data[RECOVERY_UPDATE_BLOCK_SIZE];
+	} data;
 } UpdateHeader;
 
 typedef struct {
@@ -106,7 +114,7 @@ typedef struct {
 } RecoveryUpdateHeader;
 
 typedef struct {
-    UpdateHeader header;
+    char magic_number[MAGIC_NUMBER_LENGTH];
     BundleVersion version;
     RSA *sign_pkey;
     uint64_t source_revision;

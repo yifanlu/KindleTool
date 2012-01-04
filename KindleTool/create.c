@@ -399,7 +399,7 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     header_size = MAGIC_NUMBER_LENGTH + OTA_UPDATE_V2_BLOCK_SIZE;
     header = malloc(header_size);
     index = 0;
-    strncpy((char*)header, (char*)&info->header, MAGIC_NUMBER_LENGTH);
+    strncpy((char*)header, info->magic_number, MAGIC_NUMBER_LENGTH);
     index += MAGIC_NUMBER_LENGTH;
     header[index] = (uint64_t)info->source_revision; // source
     index += sizeof(uint64_t);
@@ -461,11 +461,16 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
 
 int kindle_create_signature(UpdateInformation *info, FILE *input_bin, FILE *output)
 {
-    unsigned char header[MAGIC_NUMBER_LENGTH+UPDATE_SIGNATURE_BLOCK_SIZE]; // header to write
+	UpdateHeader header; // header to write
     
-    memset(&header, 0, MAGIC_NUMBER_LENGTH+UPDATE_SIGNATURE_BLOCK_SIZE); // set them to zero
-    strncpy((char*)header, "SP01", 4); // write magic number
-    header[MAGIC_NUMBER_LENGTH] = (uint32_t)info->certificate_number; // 4 byte certificate number
+    memset(&header, 0, sizeof(UpdateHeader)); // set them to zero
+    strncpy(header.magic_number, "SP01", 4); // write magic number
+    header.data.signature.certificate_number = (uint32_t)info->certificate_number; // 4 byte certificate number
+	if(fwrite(&header, sizeof(char), MAGIC_NUMBER_LENGTH+UPDATE_SIGNATURE_BLOCK_SIZE, output) < MAGIC_NUMBER_LENGTH+UPDATE_SIGNATURE_BLOCK_SIZE)
+	{
+        fprintf(stderr, "Error writing update header.\n");
+        return -1;
+	}
     // write signature to output
     if(sign_file(input_bin, info->sign_pkey, output) < 0)
     {
@@ -477,6 +482,12 @@ int kindle_create_signature(UpdateInformation *info, FILE *input_bin, FILE *outp
 
 int kindle_create_ota_update(UpdateInformation *info, FILE *input_tgz, FILE *output)
 {
+	UpdateHeader header;
+	
+	memset(&header, 0, sizeof(UpdateHeader)); // set them to zero
+	header.magic_number = info->magic_number; // magic number
+	header.data.ota_update.source_revision = info->source_revision;
+	
     return 0;
 }
 
