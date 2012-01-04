@@ -75,14 +75,6 @@ int sign_file(FILE *in_file, RSA *rsa_pkey, FILE *sigout_file)
     return 0;
 }
 
-int kindle_create()
-{
-	TAR *tar;
-	tar_open(&tar, "/tmp/test.tar", NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU);
-    return 0;
-}
-}
-
 int kindle_create_tar_from_directory(const char *path, const char *tar_out_name, RSA *rsa_pkey)
 {
     static char *temp_index;
@@ -336,4 +328,159 @@ FILE *kindle_compress_tar(FILE *tar_input)
         return NULL;
     }
     return gz_input;
+}
+
+int kindle_create(UpdateInformation *info, FILE *input_tgz, FILE *output)
+{
+    static char *temp_name = NULL;
+    char buffer[BUFFER_SIZE];
+    size_t count;
+    FILE *temp;
+    
+    if(temp_name == NULL)
+        temp_name = tmpnam(temp_name);
+    switch(info->version)
+    {
+        case OTAUpdateV2:
+            if((temp = fopen(temp_name, "w+b")) == NULL)
+            {
+                fprintf(stderr, "Error opening temp file.\n");
+                return -1;
+            }
+            if(kindle_create_ota_update_v2(info, input_tgz, temp) < 0) // create the update
+            {
+                fprintf(stderr, "Error creating update package.\n");
+                return -1;
+            }
+            rewind(temp); // rewind the file before reading back
+            if(kindle_create_signature(info, temp, output) < 0) // write the signature
+            {
+                fprintf(stderr, "Error signing update package.\n");
+                return -1;
+            }
+            rewind(temp); // rewind the file before writing it to output
+            // write the update
+            while((count = fread(buffer, sizeof(char), BUFFER_SIZE, temp)) > 0)
+            {
+                if(fwrite(buffer, sizeof(char), count, output) < count)
+                {
+                    fprintf(stderr, "Error writing update to output.\n");
+                    return -1;
+                }
+            }
+            if(ferror(temp) != 0)
+            {
+                fprintf(stderr, "Error reading generated update.\n");
+                return -1;
+            }
+            break;
+        case OTAUpdate:
+            return kindle_create_ota_update(info, input_tgz, output);
+            break;
+        case RecoveryUpdate:
+            return kindle_create_recovery(info, input_tgz, output);
+            break;
+        default:
+            break;
+    }
+    fprintf(stderr, "Unknown update type.\n");
+    return -1;
+}
+
+int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *output)
+{
+    int header_size;
+    unsigned char *header;
+    int index;
+    int i;
+    size_t str_len;
+    
+    // first part of the set sized data
+    header_size = MAGIC_NUMBER_LENGTH + OTA_UPDATE_V2_BLOCK_SIZE;
+    header = malloc(header_size);
+    index = 0;
+    strncpy((char*)header, (char*)&info->header, MAGIC_NUMBER_LENGTH);
+    index += MAGIC_NUMBER_LENGTH;
+    header[index] = (uint64_t)info->source_revision; // source
+    index += sizeof(uint64_t);
+    header[index] = (uint64_t)info->source_revision; // target
+    index += sizeof(uint64_t);
+    header[index] = (uint16_t)info->num_devices; // device count
+    index += sizeof(uint16_t);
+    
+    // next, we write the devices
+    header_size += info->num_devices * sizeof(uint16_t);
+    header = realloc(header, header_size);
+    for(i = 0; i < info->num_devices; i++)
+    {
+        header[index] = (uint16_t)info->devices[i]; // device
+        index += sizeof(uint16_t);
+    }
+    
+    // part two of the set sized data
+    header_size += OTA_UPDATE_V2_PART_2_BLOCK_SIZE;
+    header[index] = (uint8_t)info->critical; // critical
+    index += sizeof(uint8_t);
+    header[index] = (uint8_t)0; // 1 byte padding
+    index += sizeof(uint8_t);
+    if(md5_sum(input_tgz, (char*)&header[index]) < 0) // md5 hash
+    {
+        fprintf(stderr, "Error calculating MD5 of package.\n");
+        free(header);
+        return -1;
+    }
+    rewind(input_tgz); // reset input for later reading
+    md(&header[index], MD5_HASH_LENGTH*2); // obfuscate md5 hash
+    index += MD5_HASH_LENGTH*2;
+    header[index] = (uint16_t)info->num_meta; // num meta
+    
+    // next, we write the meta strings
+    for(i = 0; i < info->num_meta; i++)
+    {
+        str_len = strlen(info->metastrings[i]);
+        header_size += str_len + sizeof(uint16_t);
+        header = realloc(header, header_size);
+        header[index] = SWITCHENDIAN(str_len);
+        index += sizeof(uint16_t);
+        strncpy((char*)&header[index], info->metastrings[i], str_len);
+        index += str_len;
+    }
+    
+    // now, we write the header to the file
+    if(fwrite(header, sizeof(char), header_size, output) < header_size)
+    {
+        fprintf(stderr, "Error writing update header.\n");
+        free(header);
+        return -1;
+    }
+    
+    // write the actual update
+    free(header);
+    return munger(input_tgz, output, 0);
+}
+
+int kindle_create_signature(UpdateInformation *info, FILE *input_bin, FILE *output)
+{
+    unsigned char header[MAGIC_NUMBER_LENGTH+UPDATE_SIGNATURE_BLOCK_SIZE]; // header to write
+    
+    memset(&header, 0, MAGIC_NUMBER_LENGTH+UPDATE_SIGNATURE_BLOCK_SIZE); // set them to zero
+    strncpy((char*)header, "SP01", 4); // write magic number
+    header[MAGIC_NUMBER_LENGTH] = (uint32_t)info->certificate_number; // 4 byte certificate number
+    // write signature to output
+    if(sign_file(input_bin, info->sign_pkey, output) < 0)
+    {
+        fprintf(stderr, "Error signing update package.\n");
+        return -1;
+    }
+    return 0;
+}
+
+int kindle_create_ota_update(UpdateInformation *info, FILE *input_tgz, FILE *output)
+{
+    return 0;
+}
+
+int kindle_create_recovery(UpdateInformation *info, FILE *input_tgz, FILE *output)
+{
+    return 0;
 }

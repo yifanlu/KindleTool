@@ -30,11 +30,7 @@ int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
     switch(bundle_version)
     {
         case OTAUpdateV2:
-            if(kindle_convert_ota_update_v2(input, output) < 0)
-            {
-                fprintf(stderr, "Cannot extract update!\n");
-                return -1;
-            }
+            return kindle_convert_ota_update_v2(input, output);
             break;
         case UpdateSignature:
             if(kindle_convert_signature(input, sig_output) < 0)
@@ -45,26 +41,17 @@ int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
             kindle_convert(input, output, sig_output);
             break;
         case OTAUpdate:
-            if(kindle_convert_ota_update(input, output) < 0)
-            {
-                fprintf(stderr, "Cannot extract update!\n");
-                return -1;
-            }
+            return kindle_convert_ota_update(input, output);
             break;
         case RecoveryUpdate:
-            if(kindle_convert_recovery(input, output) < 0)
-            {
-                fprintf(stderr, "Cannot extract update!\n");
-                return -1;
-            }
+            return kindle_convert_recovery(input, output);
             break;
         case UnknownUpdate:
         default:
-            printf("Unknown update bundle version!\n");
-            return -1;
             break;
     }
-    return 0;
+    printf("Unknown update bundle version!\n");
+    return -1;
 }
 
 int kindle_convert_ota_update_v2(FILE *input, FILE *output)

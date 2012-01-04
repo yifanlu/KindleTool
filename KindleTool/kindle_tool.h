@@ -27,6 +27,7 @@
 #include <zlib.h>
 
 //#define SWAPENDIAN(x) (((x>>24)&0xff) | ((x<<8)&0xff0000) | ((x>>8)&0xff00) | ((x<<24)&0xff000000))
+#define SWITCHENDIAN(x) (((x>>24)&0xff) | ((x<<8)&0xff0000) | ((x>>8)&0xff00) | ((x<<24)&0xff000000))
 #define SWAPENDIAN(x) (x)
 #define BUFFER_SIZE 1024
 #define BLOCK_SIZE 64
@@ -107,6 +108,7 @@ typedef struct {
 typedef struct {
     UpdateHeader header;
     BundleVersion version;
+    RSA *sign_pkey;
     uint64_t source_revision;
     uint64_t target_revision;
     uint32_t magic_1;
@@ -160,5 +162,10 @@ int kindle_create();
 int kindle_create_tar_from_directory(const char *, const char *, RSA *);
 int kindle_sign_and_add_files(DIR *, char *, RSA *, FILE *, TAR *);
 FILE *kindle_compress_tar(FILE *);
+int kindle_create(UpdateInformation *, FILE *, FILE *);
+int kindle_create_ota_update_v2(UpdateInformation *, FILE *, FILE *);
+int kindle_create_signature(UpdateInformation *, FILE *, FILE *);
+int kindle_create_ota_update(UpdateInformation *, FILE *, FILE *);
+int kindle_create_recovery(UpdateInformation *, FILE *, FILE *);
 
 #endif

@@ -323,17 +323,15 @@ int kindle_create_main(int argc, char *argv[])
         { "crit", required_argument, NULL, 'r' },
         { "meta", required_argument, NULL, 's' }
     };
-    UpdateInformation info = {"\0\0\0\0", UnknownUpdate, 0, 0xFFFFFFFFFFFFFFFF, 0, 0, 0, 0, NULL, CertificateDeveloper, 0, 0, 0, NULL };
+    UpdateInformation info = {"\0\0\0\0", UnknownUpdate, get_default_key(), 0, 0xFFFFFFFFFFFFFFFF, 0, 0, 0, 0, NULL, CertificateDeveloper, 0, 0, 0, NULL };
     struct stat st_buf;
     FILE *input;
     FILE *temp;
     FILE *output;
     BIO *bio;
-    RSA *sign_key;
     int i;
     
     // defaults
-    sign_key = get_default_key();
     output = stdout;
     input = NULL;
     temp = NULL;
@@ -412,7 +410,7 @@ int kindle_create_main(int argc, char *argv[])
                 }
                 break;
             case 'k':
-                if((bio = BIO_new_file(optarg, "rb")) == NULL || PEM_read_bio_RSAPrivateKey(bio, &sign_key, NULL, NULL) == NULL)
+                if((bio = BIO_new_file(optarg, "rb")) == NULL || PEM_read_bio_RSAPrivateKey(bio, &info.sign_pkey, NULL, NULL) == NULL)
                 {
                     fprintf(stderr, "Key %s cannot be loaded.\n", optarg);
                     goto do_error;
@@ -458,6 +456,7 @@ int kindle_create_main(int argc, char *argv[])
         goto do_error;
     }
     argc -= (optind-1); argv += optind; // next argument
+    // input
     if(argc < 1)
     {
         fprintf(stderr, "No input found.\n");
@@ -471,7 +470,7 @@ int kindle_create_main(int argc, char *argv[])
     if(S_ISDIR (st_buf.st_mode))
     {
         // input is a directory
-        if(kindle_create_tar_from_directory(argv[0], temp_name, sign_key) < 0 || (temp = fopen(temp_name, "rb")) == NULL)
+        if(kindle_create_tar_from_directory(argv[0], temp_name, info.sign_pkey) < 0 || (temp = fopen(temp_name, "rb")) == NULL)
         {
             fprintf(stderr, "Cannot create archive.\n");
             goto do_error;
@@ -484,9 +483,20 @@ int kindle_create_main(int argc, char *argv[])
     }
     else
     {
+        // input is a file
         if((input = fopen(argv[0], "rb")) == NULL)
         {
             fprintf(stderr, "Cannot read input.\n");
+            goto do_error;
+        }
+    }
+    argc--; argv++; // next argument
+    // output
+    if(argc > 0)
+    {
+        if((output = fopen(argv[0], "wb")) == NULL)
+        {
+            fprintf(stderr, "Cannot create output.\n");
             goto do_error;
         }
     }
