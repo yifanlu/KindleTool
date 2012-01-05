@@ -383,9 +383,9 @@ int kindle_create_main(int argc, char *argv[])
                     info.devices[info.num_devices-1] = KindleDXGraphite;
                 else if(strncmp(optarg, "k3w", 3) == 0)
                     info.devices[info.num_devices-1] = Kindle3Wifi;
-                else if(strncmp(optarg, "k3", 2) == 0)
+                else if(strncmp(optarg, "k3g", 2) == 0)
                     info.devices[info.num_devices-1] = Kindle3Wifi3G;
-                else if(strncmp(optarg, "k3g", 3) == 0)
+                else if(strncmp(optarg, "k3gb", 3) == 0)
                     info.devices[info.num_devices-1] = Kindle3Wifi3GEurope;
                 else if(strncmp(optarg, "k4", 2) == 0)
                 {
@@ -397,7 +397,7 @@ int kindle_create_main(int argc, char *argv[])
                     info.devices[info.num_devices-1] = Kindle5TouchWifi;
                     strncpy(info.magic_number, "FD04", 4);
                 }
-                else if(strncmp(optarg, "k5", 2) == 0)
+                else if(strncmp(optarg, "k5g", 2) == 0)
                 {
                     info.devices[info.num_devices-1] = Kindle5TouchWifi3G;
                     strncpy(info.magic_number, "FD04", 4);
