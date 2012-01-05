@@ -8,6 +8,50 @@
 
 #include "kindle_tool.h"
 
+int gunzip_file(FILE *input, FILE *output)
+{
+    gzFile gz_input;
+    unsigned char buffer[BUFFER_SIZE];
+    size_t count;
+    
+	// open the gzip file
+	if((gz_input = gzdopen(fileno(input), "rb")) == NULL)
+	{
+        fprintf(stderr, "Cannot cannot read compressed input.\n");
+        return -1;
+	}
+    // just to be safe, no compression
+    if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
+    {
+        fprintf(stderr, "Cannot set compression level for input.\n");
+		gzclose(gz_input);
+        return -1;
+    }
+    // read the input and decompress it
+    while((count = (uint32_t)gzread(buffer, sizeof(char), BUFFER_SIZE, gz_input)) > 0)
+    {
+        if(fwrite(output, buffer, count) != count)
+        {
+            fprintf(stderr, "Cannot decompress input.\n");
+			gzclose(gz_input);
+            return -1;
+        }
+    }
+    if(gzerror(gz_input) != 0)
+    {
+        fprintf(stderr, "Error reading input.\n");
+		gzclose(gz_input);
+        return -1;
+    }
+    gzclose(gz_input);
+    return 0;
+}
+
+int kindle_extract_tar(TAR *input_tar, const char *output_path)
+{
+
+}
+
 int kindle_read_bundle_header(UpdateHeader *header, FILE *input)
 {
     if(fread(header, sizeof(char), MAGIC_NUMBER_LENGTH, input) < 1 || ferror(input) != 0)

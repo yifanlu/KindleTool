@@ -157,6 +157,8 @@ BundleVersion get_bundle_version(char*);
 int md5_sum(FILE *, char*);
 RSA *get_default_key();
 
+FILE *gunzip_file(FILE *);
+int kindle_extract_tar(TAR *, const char *);
 int kindle_read_bundle_header(UpdateHeader *, FILE *);
 int kindle_convert(FILE *, FILE *, FILE *);
 int kindle_convert_ota_update_v2(FILE *, FILE *);
@@ -166,10 +168,9 @@ int kindle_convert_recovery(UpdateHeader *, FILE *, FILE *);
 
 int is_script(char *);
 int sign_file(FILE *, RSA *, FILE *);
-int kindle_create();
+FILE *gzip_file(FILE *);
 int kindle_create_tar_from_directory(const char *, const char *, RSA *);
 int kindle_sign_and_add_files(DIR *, char *, RSA *, FILE *, TAR *);
-FILE *kindle_compress_tar(FILE *);
 int kindle_create(UpdateInformation *, FILE *, FILE *);
 int kindle_create_ota_update_v2(UpdateInformation *, FILE *, FILE *);
 int kindle_create_signature(UpdateInformation *, FILE *, FILE *);

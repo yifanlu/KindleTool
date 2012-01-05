@@ -474,7 +474,7 @@ int kindle_create_main(int argc, char *argv[])
             fprintf(stderr, "Cannot create archive.\n");
             goto do_error;
         }
-        if((input = kindle_compress_tar(temp)) == NULL)
+        if((input = gzip_file(temp)) == NULL)
         {
             fprintf(stderr, "Cannot compress archive.\n");
             goto do_error;

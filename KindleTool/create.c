@@ -75,6 +75,54 @@ int sign_file(FILE *in_file, RSA *rsa_pkey, FILE *sigout_file)
     return 0;
 }
 
+FILE *gzip_file(FILE *input)
+{
+    static char *temp_name = NULL;
+    gzFile gz_file;
+    unsigned char buffer[BUFFER_SIZE];
+    size_t count;
+    FILE *gz_input;
+    
+    // create a temporary file and open it in gzip
+    temp_name = tmpnam(temp_name);
+    if((gz_file = gzopen(temp_name, "wb")) == NULL)
+    {
+        fprintf(stderr, "Cannot create temporary file to compress input.\n");
+        return NULL;
+    }
+    // just to be safe, no compression
+    if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
+    {
+        fprintf(stderr, "Cannot set compression level for input.\n");
+        gzclose(gz_file);
+        return NULL;
+    }
+    // read the input and compress it
+    while((count = fread(buffer, sizeof(char), BUFFER_SIZE, input)) > 0)
+    {
+        if(gzwrite(gz_file, buffer, (uint32_t)count) != count)
+        {
+            fprintf(stderr, "Cannot compress input.\n");
+            gzclose(gz_file);
+            return NULL;
+        }
+    }
+    if(ferror(input) != 0)
+    {
+        fprintf(stderr, "Error reading input.\n");
+        gzclose(gz_file);
+        return NULL;
+    }
+    gzclose(gz_file);
+    // open the data we just compressed
+    if((gz_input = fopen(temp_name, "r")) == NULL)
+    {
+        fprintf(stderr, "Error reading input.\n");
+        return NULL;
+    }
+    return gz_input;
+}
+
 int kindle_create_tar_from_directory(const char *path, const char *tar_out_name, RSA *rsa_pkey)
 {
     static char *temp_index;
@@ -281,54 +329,6 @@ on_error: // Yes, I know GOTOs are bad, but it's more readable than typing what'
     if(next != NULL)
         closedir(next);
     return -1;
-}
-
-FILE *kindle_compress_tar(FILE *tar_input)
-{
-    static char *temp_name = NULL;
-    gzFile gz_file;
-    unsigned char buffer[BUFFER_SIZE];
-    size_t count;
-    FILE *gz_input;
-    
-    // create a temporary file and open it in gzip
-    temp_name = tmpnam(temp_name);
-    if((gz_file = gzopen(temp_name, "wb")) == NULL)
-    {
-        fprintf(stderr, "Cannot create temporary file to compress input.\n");
-        return NULL;
-    }
-    // just to be safe, no compression
-    if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
-    {
-        fprintf(stderr, "Cannot set compression level for input.\n");
-        gzclose(gz_file);
-        return NULL;
-    }
-    // read the input and compress it
-    while((count = fread(buffer, sizeof(char), BUFFER_SIZE, tar_input)) > 0)
-    {
-        if(gzwrite(gz_file, buffer, (uint32_t)count) != count)
-        {
-            fprintf(stderr, "Cannot compress input.\n");
-            gzclose(gz_file);
-            return NULL;
-        }
-    }
-    if(ferror(tar_input) != 0)
-    {
-        fprintf(stderr, "Error reading input.\n");
-        gzclose(gz_file);
-        return NULL;
-    }
-    gzclose(gz_file);
-    // open the data we just compressed
-    if((gz_input = fopen(temp_name, "r")) == NULL)
-    {
-        fprintf(stderr, "Error reading input.\n");
-        return NULL;
-    }
-    return gz_input;
 }
 
 int kindle_create(UpdateInformation *info, FILE *input_tgz, FILE *output)
