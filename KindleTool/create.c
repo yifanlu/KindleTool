@@ -84,7 +84,8 @@ FILE *gzip_file(FILE *input)
     FILE *gz_input;
     
     // create a temporary file and open it in gzip
-    temp_name = tmpnam(temp_name);
+    if(temp_name == NULL)
+	temp_name = tmpnam(temp_name);
     if((gz_file = gzopen(temp_name, "wb")) == NULL)
     {
         fprintf(stderr, "Cannot create temporary file to compress input.\n");
@@ -537,4 +538,211 @@ int kindle_create_recovery(UpdateInformation *info, FILE *input_tgz, FILE *outpu
     
     // write package to output
     return munger(input_tgz, output, 0);
+}
+
+int kindle_create_main(int argc, char *argv[])
+{
+    static char *temp_name;
+    int opt;
+    int opt_index;
+    static const struct option opts[] = {
+        { "device", required_argument, NULL, 'd' },
+        { "key", required_argument, NULL, 'k' },
+        { "bundle", required_argument, NULL, 'b' },
+        { "srcrev", required_argument, NULL, 's' },
+        { "tgtrev", required_argument, NULL, 't' },
+        { "magic1", required_argument, NULL, '1' },
+        { "magic2", required_argument, NULL, '2' },
+        { "minor", required_argument, NULL, 'm' },
+        { "cert", required_argument, NULL, 'c' },
+        { "opt", required_argument, NULL, 'o' },
+        { "crit", required_argument, NULL, 'r' },
+        { "meta", required_argument, NULL, 's' }
+    };
+    UpdateInformation info = {"\0\0\0\0", UnknownUpdate, get_default_key(), 0, 0xFFFFFFFFFFFFFFFF, 0, 0, 0, 0, NULL, CertificateDeveloper, 0, 0, 0, NULL };
+    struct stat st_buf;
+    FILE *input;
+    FILE *temp;
+    FILE *output;
+    BIO *bio;
+    int i;
+    
+    // defaults
+    output = stdout;
+    input = NULL;
+    temp = NULL;
+    if(temp_name == NULL)
+        temp_name = tmpnam(temp_name);
+    // update type
+    if(argc < 2)
+    {
+        fprintf(stderr, "Not enough arguments");
+        return -1;
+    }
+    if(strncmp(argv[0], "ota", 3) == 0)
+    {
+        info.version = OTAUpdate;
+        strncpy(info.magic_number, "FB02", 4);
+    }
+    else if(strncmp(argv[0], "ota2", 4) == 0)
+    {
+        info.version = OTAUpdateV2;
+    }
+    else if(strncmp(argv[0], "recovery", 8) == 0)
+    {
+        info.version = RecoveryUpdate;
+        strncpy(info.magic_number, "FC02", 4);
+    }
+    else
+    {
+        fprintf(stderr, "Invalid update type.");
+        return -1;
+    }
+    argc--; argv++; // next argument
+    // arguments
+    while((opt = getopt_long(argc, argv, "d:k:b:s:t:1:2:m:c:o:r:x:", opts, &opt_index)) != -1)
+    {
+        switch(opt)
+        {
+            case 'd':
+                info.devices = realloc(info.devices, ++info.num_devices * sizeof(Device));
+                if(strncmp(optarg, "k1", 2) == 0)
+                    info.devices[info.num_devices-1] = Kindle1;
+                else if(strncmp(optarg, "k2", 2) == 0)
+                    info.devices[info.num_devices-1] = Kindle2US;
+                else if(strncmp(optarg, "k2i", 3) == 0)
+                    info.devices[info.num_devices-1] = Kindle2International;
+                else if(strncmp(optarg, "dx", 2) == 0)
+                    info.devices[info.num_devices-1] = KindleDXUS;
+                else if(strncmp(optarg, "dxi", 3) == 0)
+                    info.devices[info.num_devices-1] = KindleDXInternational;
+                else if(strncmp(optarg, "dxg", 3) == 0)
+                    info.devices[info.num_devices-1] = KindleDXGraphite;
+                else if(strncmp(optarg, "k3w", 3) == 0)
+                    info.devices[info.num_devices-1] = Kindle3Wifi;
+                else if(strncmp(optarg, "k3g", 2) == 0)
+                    info.devices[info.num_devices-1] = Kindle3Wifi3G;
+                else if(strncmp(optarg, "k3gb", 3) == 0)
+                    info.devices[info.num_devices-1] = Kindle3Wifi3GEurope;
+                else if(strncmp(optarg, "k4", 2) == 0)
+                {
+                    info.devices[info.num_devices-1] = Kindle4NonTouch;
+                    strncpy(info.magic_number, "FC04", 4);
+                }
+                else if(strncmp(optarg, "k5w", 3) == 0)
+                {
+                    info.devices[info.num_devices-1] = Kindle5TouchWifi;
+                    strncpy(info.magic_number, "FD04", 4);
+                }
+                else if(strncmp(optarg, "k5g", 2) == 0)
+                {
+                    info.devices[info.num_devices-1] = Kindle5TouchWifi3G;
+                    strncpy(info.magic_number, "FD04", 4);
+                }
+                else
+                {
+                    info.num_devices--;
+                    fprintf(stderr, "Unknown device %s, ignoring.\n", optarg);
+                }
+                break;
+            case 'k':
+                if((bio = BIO_new_file(optarg, "rb")) == NULL || PEM_read_bio_RSAPrivateKey(bio, &info.sign_pkey, NULL, NULL) == NULL)
+                {
+                    fprintf(stderr, "Key %s cannot be loaded.\n", optarg);
+                    goto do_error;
+                }
+                break;
+            case 'b':
+                strncpy(info.magic_number, optarg, 4);
+                break;
+            case 's':
+                info.source_revision = atol(optarg);
+                break;
+            case 't':
+                info.target_revision = atol(optarg);
+                break;
+            case '1':
+                info.magic_1 = atoi(optarg);
+                break;
+            case '2':
+                info.magic_2 = atoi(optarg);
+                break;
+            case 'm':
+                info.minor = atoi(optarg);
+                break;
+            case 'c':
+                info.certificate_number = (CertificateNumber)atoi(optarg);
+                break;
+            case 'o':
+                info.optional = (uint16_t)atoi(optarg);
+                break;
+            case 'r':
+                info.critical = (uint16_t)atoi(optarg);
+                break;
+            case 'x':
+                info.metastrings = realloc(info.metastrings, ++info.num_meta * sizeof(char*));
+                info.metastrings[info.num_meta-1] = strdup(optarg);
+                break;
+        }
+    }
+    // validation
+    if(info.num_devices < 1 || (info.version != OTAUpdateV2 && info.num_devices > 1))
+    {
+        fprintf(stderr, "Invalid number of supported devices, %d, for this update type.\n", info.num_devices);
+        goto do_error;
+    }
+    argc -= (optind-1); argv += optind; // next argument
+    // input
+    if(argc < 1)
+    {
+        fprintf(stderr, "No input found.\n");
+        goto do_error;
+    }
+    if(stat(argv[0], &st_buf) != 0)
+    {
+        fprintf(stderr, "Cannot read input.\n");
+        goto do_error;
+    }
+    if(S_ISDIR (st_buf.st_mode))
+    {
+        // input is a directory
+        if(kindle_create_tar_from_directory(argv[0], temp_name, info.sign_pkey) < 0 || (temp = fopen(temp_name, "rb")) == NULL)
+        {
+            fprintf(stderr, "Cannot create archive.\n");
+            goto do_error;
+        }
+	temp_name = tmpnam(NULL); // create a new temp file
+	
+        if((input = gzip_file(temp)) == NULL)
+        {
+            fprintf(stderr, "Cannot compress archive.\n");
+            goto do_error;
+        }
+    }
+    else
+    {
+        // input is a file
+        if((input = fopen(argv[0], "rb")) == NULL)
+        {
+            fprintf(stderr, "Cannot read input.\n");
+            goto do_error;
+        }
+    }
+    argc--; argv++; // next argument
+    // output
+    if(argc > 0)
+    {
+        if((output = fopen(argv[0], "wb")) == NULL)
+        {
+            fprintf(stderr, "Cannot create output.\n");
+            goto do_error;
+        }
+    }
+    return 0;
+do_error:
+    free(info.devices);
+    for(i = 0; i < info.num_meta; i++)
+        free(info.metastrings[i]);
+    free(info.metastrings);
+    return -1;
 }

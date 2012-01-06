@@ -8,24 +8,34 @@
 
 #include "kindle_tool.h"
 
-int gunzip_file(FILE *input, FILE *output)
+FILE *gunzip_file(FILE *input)
 {
+    static char *temp_name = NULL;
+    FILE *output;
     gzFile gz_input;
     unsigned char buffer[BUFFER_SIZE];
     size_t count;
     
-	// open the gzip file
-	if((gz_input = gzdopen(fileno(input), "rb")) == NULL)
-	{
-        fprintf(stderr, "Cannot cannot read compressed input.\n");
-        return -1;
-	}
+    // create a temporary file and open
+    if(temp_name == NULL)
+	temp_name = tmpnam(temp_name);
+    if((output == fopen(temp_name, "w+b")) == NULL)
+    {
+	fprintf(stderr, "Cannot create gunzip output.\n");
+	return NULL;
+    }
+    // open the gzip file
+    if((gz_input = gzdopen(fileno(input), "rb")) == NULL)
+    {
+        fprintf(stderr, "Cannot read compressed input.\n");
+        return NULL;
+    }
     // just to be safe, no compression
     if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
     {
         fprintf(stderr, "Cannot set compression level for input.\n");
 		gzclose(gz_input);
-        return -1;
+        return NULL;
     }
     // read the input and decompress it
     while((count = (uint32_t)gzread(buffer, sizeof(char), BUFFER_SIZE, gz_input)) > 0)
@@ -34,22 +44,18 @@ int gunzip_file(FILE *input, FILE *output)
         {
             fprintf(stderr, "Cannot decompress input.\n");
 			gzclose(gz_input);
-            return -1;
+            return NULL;
         }
     }
     if(gzerror(gz_input) != 0)
     {
         fprintf(stderr, "Error reading input.\n");
 		gzclose(gz_input);
-        return -1;
+        return NULL;
     }
     gzclose(gz_input);
-    return 0;
-}
-
-int kindle_extract_tar(TAR *input_tar, const char *output_path)
-{
-
+    rewind(output);
+    return output;
 }
 
 int kindle_read_bundle_header(UpdateHeader *header, FILE *input)
@@ -286,4 +292,123 @@ int kindle_convert_recovery(UpdateHeader *header, FILE *input, FILE *output)
     }
     
     return demunger(input, output, 0);
+}
+
+int kindle_convert_main(int argc, char *argv[])
+{
+    int opt;
+    int opt_index;
+    static const struct option opts[] = {
+        { "stdout", no_argument, NULL, 'c' },
+        { "info", no_argument, NULL, 'i' },
+        { "sig", required_argument, NULL, 's' }
+    };
+    FILE *input;
+    FILE *output;
+    FILE *sig_output;
+    const char *in_name;
+    char *out_name;
+
+    
+    if(argc < 1)
+    {
+        fprintf(stderr, "No input specified.\n");
+        return -1;
+    }
+    in_name = argv[0];
+    out_name = malloc(strlen(in_name) + 7);
+    strcpy(out_name, in_name);
+    strcat(out_name, ".tar.gz");
+    if((input = fopen(in_name, "rb")) == NULL)
+    {
+        fprintf(stderr, "Cannot open input for reading.\n");
+        free(out_name);
+        return -1;
+    }
+    if((output = fopen(out_name, "wb")) == NULL)
+    {
+        fprintf(stderr, "Cannot open output for writing.\n");
+        free(out_name);
+        return -1;
+    }
+    sig_output = NULL;
+    while((opt = getopt_long(argc, argv, "ics:", opts, &opt_index)) != -1)
+    {
+        switch(opt)
+        {
+            case 'i':
+                output = NULL;
+                break;
+            case 'c':
+                output = stdout;
+                break;
+            case 's':
+                if((sig_output = fopen(optarg, "wb")) == NULL)
+                {
+                    fprintf(stderr, "Cannot open signature output for writing.\n");
+                    free(out_name);
+                    return -1;
+                }
+            default:
+                break;
+        }
+    }
+    if(kindle_convert(input, output, sig_output) < 0)
+    {
+        fprintf(stderr, "Error converting update.\n");
+        free(out_name);
+        return -1;
+    }
+    if(output != stdout)
+        remove(in_name);
+    free(out_name);
+    return 0;
+}
+
+int kindle_extract_main(int argc, char *argv[])
+{
+    static char *temp_name;
+    FILE *bin_input;
+    FILE *gz_output;
+    FILE *tar_input;
+    TAR *tar;
+    
+    if(argc < 2)
+    {
+	fprintf(stderr, "Invalid number of arguments.\n");
+	return -1;
+    }
+    if(temp_name == NULL)
+        temp_name = tmpnam(temp_name);
+    if((bin_input = fopen(argv[0], "rb")) == NULL)
+    {
+	fprintf(stderr, "Cannot open update input.\n");
+	return -1;
+    }
+    if((gz_output = fopen(temp_name, "w+b")) == NULL)
+    {
+	fprintf(stderr, "Cannot create temporary file.\n");
+	return -1;
+    }
+    if(kindle_convert(bin_input, gz_output, NULL) < 0)
+    {
+        fprintf(stderr, "Error converting update.\n");
+        return -1;
+    }
+    if((tar_input = gunzip_file(gz_input)) == NULL)
+    {
+        fprintf(stderr, "Error decompressing update.\n");
+        return -1;
+    }
+    if(tar_fdopen(&tar, fileno(tar_input), NULL, NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU) < 0)
+    {
+        fprintf(stderr, "Error opening upadte tar.\n");
+        return -1;
+    }
+    if(tar_extract_all(tar, argv[1]) < 0)
+    {
+        fprintf(stderr, "Error extracting tar.\n");
+        return -1;
+    }
+    return 0;
 }

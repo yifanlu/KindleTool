@@ -156,15 +156,19 @@ const char *convert_device_id(Device);
 BundleVersion get_bundle_version(char*);
 int md5_sum(FILE *, char*);
 RSA *get_default_key();
+int kindle_print_help(const char *prog_name);
+int kindle_deobfuscate_main(int, char **);
+int kindle_obfuscate_main(int, char **);
 
 FILE *gunzip_file(FILE *);
-int kindle_extract_tar(TAR *, const char *);
 int kindle_read_bundle_header(UpdateHeader *, FILE *);
 int kindle_convert(FILE *, FILE *, FILE *);
 int kindle_convert_ota_update_v2(FILE *, FILE *);
 int kindle_convert_signature(UpdateHeader *, FILE *, FILE *);
 int kindle_convert_ota_update(UpdateHeader *, FILE *, FILE *);
 int kindle_convert_recovery(UpdateHeader *, FILE *, FILE *);
+int kindle_convert_main(int, char **);
+int kindle_extract_main(int, char **);
 
 int is_script(char *);
 int sign_file(FILE *, RSA *, FILE *);
@@ -176,5 +180,6 @@ int kindle_create_ota_update_v2(UpdateInformation *, FILE *, FILE *);
 int kindle_create_signature(UpdateInformation *, FILE *, FILE *);
 int kindle_create_ota_update(UpdateInformation *, FILE *, FILE *);
 int kindle_create_recovery(UpdateInformation *, FILE *, FILE *);
+int kindle_create_main(int, char **);
 
 #endif
