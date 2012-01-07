@@ -202,10 +202,20 @@ int kindle_obfuscate_main(int argc, char *argv[])
         if((input = fopen(argv[0], "rb")) == NULL)
         {
             fprintf(stderr, "Cannot open input for reading.\n");
+            fclose(output);
             return -1;
         }
     }
-    return demunger(input, output, 0);
+    if(demunger(input, output, 0) < 0)
+    {
+        fprintf(stderr, "Cannot obfuscate.\n");
+        fclose(input);
+        fclose(output);
+        return -1;
+    }
+    fclose(input);
+    fclose(output);
+    return 0;
 }
 
 int kindle_deobfuscate_main(int argc, char *argv[])
@@ -227,10 +237,20 @@ int kindle_deobfuscate_main(int argc, char *argv[])
         if((input = fopen(argv[0], "rb")) == NULL)
         {
             fprintf(stderr, "Cannot open input for reading.\n");
+            fclose(output);
             return -1;
         }
     }
-    return munger(input, output, 0);
+    if(munger(input, output, 0) < 0)
+    {
+        fprintf(stderr, "Cannot deobfuscate.\n");
+        fclose(input);
+        fclose(output);
+        return -1;
+    }
+    fclose(input);
+    fclose(output);
+    return 0;
 }
 
 int main (int argc, char *argv[])

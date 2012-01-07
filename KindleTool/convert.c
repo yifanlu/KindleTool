@@ -10,19 +10,16 @@
 
 FILE *gunzip_file(FILE *input)
 {
-    static char *temp_name = NULL;
     FILE *output;
     gzFile gz_input;
     unsigned char buffer[BUFFER_SIZE];
     size_t count;
     
     // create a temporary file and open
-    if(temp_name == NULL)
-	temp_name = tmpnam(temp_name);
-    if((output = fopen(temp_name, "w+b")) == NULL)
+    if((output = tmpfile()) == NULL)
     {
-	fprintf(stderr, "Cannot create gunzip output.\n");
-	return NULL;
+        fprintf(stderr, "Cannot create gunzip output.\n");
+        return NULL;
     }
     // open the gzip file
     if((gz_input = gzdopen(fileno(input), "rb")) == NULL)
@@ -144,7 +141,7 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     
     critical = *(uint16_t *)&data[index];
     index += sizeof(uint16_t);
-    fprintf(stderr, "Critical       %hd\n", num_devices);
+    fprintf(stderr, "Critical       %hd\n", critical);
     md5_sum = &data[index];
     dm((unsigned char*)md5_sum, MD5_HASH_LENGTH);
     index += MD5_HASH_LENGTH;
@@ -328,6 +325,7 @@ int kindle_convert_main(int argc, char *argv[])
     if(argc < 1)
     {
         fprintf(stderr, "No input specified.\n");
+        fclose(sig_output);
         return -1;
     }
     argc -= (optind-1); argv += optind; // next argument
@@ -341,6 +339,7 @@ int kindle_convert_main(int argc, char *argv[])
         {
             fprintf(stderr, "Cannot open output for writing.\n");
             free(out_name);
+            fclose(sig_output);
             return -1;
         }
     }
@@ -348,6 +347,8 @@ int kindle_convert_main(int argc, char *argv[])
     {
         fprintf(stderr, "Cannot open input for reading.\n");
         free(out_name);
+        fclose(sig_output);
+        fclose(output);
         return -1;
     }
     if(kindle_convert(input, output, sig_output) < 0)
@@ -355,18 +356,23 @@ int kindle_convert_main(int argc, char *argv[])
         fprintf(stderr, "Error converting update.\n");
         remove(out_name); // clean up our mess
         free(out_name);
+        fclose(sig_output);
+        fclose(output);
+        fclose(input);
         return -1;
     }
     if(output != stdout && !info_only) // if output was some file, delete the original
         remove(in_name);
     free(out_name);
+    fclose(sig_output);
+    fclose(output);
+    fclose(input);
     fprintf(stderr, "Done.\n");
     return 0;
 }
 
 int kindle_extract_main(int argc, char *argv[])
 {
-    static char *temp_name;
     FILE *bin_input;
     FILE *gz_output;
     FILE *tar_input;
@@ -377,39 +383,53 @@ int kindle_extract_main(int argc, char *argv[])
 	fprintf(stderr, "Invalid number of arguments.\n");
 	return -1;
     }
-    if(temp_name == NULL)
-        temp_name = tmpnam(temp_name);
     if((bin_input = fopen(argv[0], "rb")) == NULL)
     {
 	fprintf(stderr, "Cannot open update input.\n");
 	return -1;
     }
-    if((gz_output = fopen(temp_name, "w+b")) == NULL)
+    if((gz_output = tmpfile()) == NULL)
     {
-	fprintf(stderr, "Cannot create temporary file.\n");
-	return -1;
+        fprintf(stderr, "Cannot create temporary file.\n");
+        fclose(bin_input);
+        return -1;
     }
     if(kindle_convert(bin_input, gz_output, NULL) < 0)
     {
         fprintf(stderr, "Error converting update.\n");
+        fclose(bin_input);
+        fclose(gz_output);
         return -1;
     }
     rewind(gz_output);
     if((tar_input = gunzip_file(gz_output)) == NULL)
     {
         fprintf(stderr, "Error decompressing update.\n");
+        fclose(bin_input);
+        fclose(gz_output);
         return -1;
     }
     if(tar_fdopen(&tar, fileno(tar_input), NULL, NULL, O_RDONLY, 0644, TAR_GNU) < 0)
     {
         fprintf(stderr, "Error opening update tar.\n");
+        fclose(bin_input);
+        fclose(gz_output);
+        fclose(tar_input);
         return -1;
     }
     if(tar_extract_all(tar, argv[1]) < 0)
     {
         fprintf(stderr, "Error extracting tar.\n");
+        tar_close(tar);
+        fclose(bin_input);
+        fclose(gz_output);
+        fclose(tar_input);
         return -1;
     }
+    tar_close(tar);
+    fclose(bin_input);
+    fclose(gz_output);
+    fclose(tar_input);
     fprintf(stderr, "Done.\n");
     return 0;
 }

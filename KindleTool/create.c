@@ -77,16 +77,13 @@ int sign_file(FILE *in_file, RSA *rsa_pkey, FILE *sigout_file)
 
 FILE *gzip_file(FILE *input)
 {
-    static char *temp_name = NULL;
     gzFile gz_file;
     unsigned char buffer[BUFFER_SIZE];
     size_t count;
     FILE *gz_input;
     
     // create a temporary file and open it in gzip
-    if(temp_name == NULL)
-	temp_name = tmpnam(temp_name);
-    if((gz_file = gzopen(temp_name, "wb")) == NULL)
+    if((gz_input = tmpfile()) == NULL || (gz_file = gzdopen(fileno(gz_input), "wb")) == NULL)
     {
         fprintf(stderr, "Cannot create temporary file to compress input.\n");
         return NULL;
@@ -114,25 +111,23 @@ FILE *gzip_file(FILE *input)
         gzclose(gz_file);
         return NULL;
     }
-    gzclose(gz_file);
-    // open the data we just compressed
-    if((gz_input = fopen(temp_name, "r")) == NULL)
-    {
-        fprintf(stderr, "Error reading input.\n");
-        return NULL;
-    }
+    gzflush(gz_file, Z_FINISH); // we cannot gzclose yet, or temp file is deleted
+    // move the file pointer back to the beginning
+    rewind(gz_input);
     return gz_input;
 }
 
-int kindle_create_tar_from_directory(const char *path, const char *tar_out_name, RSA *rsa_pkey)
+int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_pkey)
 {
-    static char *temp_index;
-    static char *temp_index_sig;
+    static char *temp_index = NULL;
+    static char *temp_index_sig = NULL;
     char *cwd;
     DIR *dir;
     FILE *index_file;
     FILE *index_sig_file;
     TAR *tar;
+    
+    fprintf(stderr, "%s\n", path);
     
     // save current directory
     cwd = getcwd(NULL, 0);
@@ -151,18 +146,19 @@ int kindle_create_tar_from_directory(const char *path, const char *tar_out_name,
     }
     // create index file
     temp_index = tmpnam(temp_index);
-    temp_index_sig = tmpnam(temp_index_sig);
-    if((index_file = fopen(temp_index, "w+")) == NULL || (index_sig_file = fopen(temp_index_sig, "w")) == NULL)
+    fprintf(stderr, "[D] Temp index: %s\n", temp_index);
+    if((index_file = fopen(temp_index, "w+")) == NULL)
     {
         fprintf(stderr, "Cannot create index file.\n");
         chdir((const char*)cwd);
         return -1;
     }
     // create tar file
-    if(tar_open(&tar, (char*)tar_out_name, NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU) < 0)
+    if(tar_fdopen(&tar, fileno(tar_out), NULL, NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU) < 0)
     {
         fprintf(stderr, "Cannot create TAR file.\n");
         chdir((const char*)cwd);
+        fclose(index_file);
         return -1;
     }
     // sign and add files to tar
@@ -170,14 +166,21 @@ int kindle_create_tar_from_directory(const char *path, const char *tar_out_name,
     {
         fprintf(stderr, "Cannot add files to TAR.\n");
         chdir((const char*)cwd);
+        fclose(index_file);
+        tar_close(tar);
         return -1;
     }
     // sign index
     rewind(index_file);
-    if(sign_file(index_file, rsa_pkey, index_sig_file) < 0)
+    temp_index_sig = tmpnam(temp_index_sig);
+    fprintf(stderr, "[D] Temp index sig: %s\n", temp_index_sig);
+    if((index_sig_file = fopen(temp_index_sig, "wb")) == NULL || sign_file(index_file, rsa_pkey, index_sig_file) < 0)
     {
         fprintf(stderr, "Cannot sign index.\n");
         chdir((const char*)cwd);
+        fclose(index_file);
+        fclose(index_sig_file);
+        tar_close(tar);
         return -1;
     }
     // add index to tar
@@ -187,11 +190,13 @@ int kindle_create_tar_from_directory(const char *path, const char *tar_out_name,
     {
         fprintf(stderr, "Cannot add index to tar archive.\n");
         chdir((const char*)cwd);
+        fclose(index_file);
         return -1;
     }
     
     // clean up
     tar_append_eof(tar);
+    // we cannot close the tar file yet because it will delete the temp file
     remove(INDEX_FILE_NAME);
     closedir(dir);
     chdir((const char*)cwd);
@@ -201,7 +206,7 @@ int kindle_create_tar_from_directory(const char *path, const char *tar_out_name,
 
 int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE *out_index, TAR *out_tar)
 {
-    static char *temp_sig;
+    static char *temp_sig = NULL;
     size_t pathlen;
 	struct dirent *ent = NULL;
 	struct stat st;
@@ -212,8 +217,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
     FILE *sigfile = NULL;
     char md5[MD5_HASH_LENGTH+1];
 	
-    if(temp_sig == NULL)
-        temp_sig = tmpnam(temp_sig);
+    temp_sig = tmpnam(temp_sig);
 	while ((ent = readdir (dir)) != NULL)
 	{
         pathlen = strlen(dirname) + strlen(ent->d_name);
@@ -280,6 +284,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
                 fprintf(stderr, "Cannot create signature file %s\n", signame);
                 goto on_error;
             }
+            fprintf(stderr, "[D] Temp sig: %s\n", temp_sig);
             if(sign_file(file, rsa_pkey_file, sigfile) < 0)
             {
                 fprintf(stderr, "Cannot sign %s\n", absname);
@@ -334,17 +339,14 @@ on_error: // Yes, I know GOTOs are bad, but it's more readable than typing what'
 
 int kindle_create(UpdateInformation *info, FILE *input_tgz, FILE *output)
 {
-    static char *temp_name = NULL;
     char buffer[BUFFER_SIZE];
     size_t count;
     FILE *temp;
     
-    if(temp_name == NULL)
-        temp_name = tmpnam(temp_name);
     switch(info->version)
     {
         case OTAUpdateV2:
-            if((temp = fopen(temp_name, "w+b")) == NULL)
+            if((temp = tmpfile()) == NULL)
             {
                 fprintf(stderr, "Error opening temp file.\n");
                 return -1;
@@ -352,12 +354,14 @@ int kindle_create(UpdateInformation *info, FILE *input_tgz, FILE *output)
             if(kindle_create_ota_update_v2(info, input_tgz, temp) < 0) // create the update
             {
                 fprintf(stderr, "Error creating update package.\n");
+                fclose(temp);
                 return -1;
             }
             rewind(temp); // rewind the file before reading back
             if(kindle_create_signature(info, temp, output) < 0) // write the signature
             {
                 fprintf(stderr, "Error signing update package.\n");
+                fclose(temp);
                 return -1;
             }
             rewind(temp); // rewind the file before writing it to output
@@ -367,14 +371,18 @@ int kindle_create(UpdateInformation *info, FILE *input_tgz, FILE *output)
                 if(fwrite(buffer, sizeof(char), count, output) < count)
                 {
                     fprintf(stderr, "Error writing update to output.\n");
+                    fclose(temp);
                     return -1;
                 }
             }
             if(ferror(temp) != 0)
             {
                 fprintf(stderr, "Error reading generated update.\n");
+                fclose(temp);
                 return -1;
             }
+            fclose(temp);
+            return 0;
             break;
         case OTAUpdate:
             return kindle_create_ota_update(info, input_tgz, output);
@@ -382,10 +390,11 @@ int kindle_create(UpdateInformation *info, FILE *input_tgz, FILE *output)
         case RecoveryUpdate:
             return kindle_create_recovery(info, input_tgz, output);
             break;
+        case UnknownUpdate:
         default:
+            fprintf(stderr, "Unknown update type.\n");
             break;
     }
-    fprintf(stderr, "Unknown update type.\n");
     return -1;
 }
 
@@ -542,7 +551,6 @@ int kindle_create_recovery(UpdateInformation *info, FILE *input_tgz, FILE *outpu
 
 int kindle_create_main(int argc, char *argv[])
 {
-    static char *temp_name;
     int opt;
     int opt_index;
     static const struct option opts[] = {
@@ -571,8 +579,6 @@ int kindle_create_main(int argc, char *argv[])
     output = stdout;
     input = NULL;
     temp = NULL;
-    if(temp_name == NULL)
-        temp_name = tmpnam(temp_name);
     // update type
     if(argc < 2)
     {
@@ -582,7 +588,7 @@ int kindle_create_main(int argc, char *argv[])
     if(strncmp(argv[0], "ota", 3) == 0)
     {
         info.version = OTAUpdate;
-        strncpy(info.magic_number, "FB02", 4);
+        strncpy(info.magic_number, "FC02", 4);
     }
     else if(strncmp(argv[0], "ota2", 4) == 0)
     {
@@ -591,7 +597,7 @@ int kindle_create_main(int argc, char *argv[])
     else if(strncmp(argv[0], "recovery", 8) == 0)
     {
         info.version = RecoveryUpdate;
-        strncpy(info.magic_number, "FC02", 4);
+        strncpy(info.magic_number, "FB02", 4);
     }
     else
     {
@@ -707,18 +713,19 @@ int kindle_create_main(int argc, char *argv[])
     if(S_ISDIR (st_buf.st_mode))
     {
         // input is a directory
-        if(kindle_create_tar_from_directory(argv[0], temp_name, info.sign_pkey) < 0 || (temp = fopen(temp_name, "rb")) == NULL)
+        if((temp = tmpfile()) == NULL || kindle_create_tar_from_directory(argv[0], temp, info.sign_pkey) < 0)
         {
             fprintf(stderr, "Cannot create archive.\n");
             goto do_error;
         }
-	temp_name = tmpnam(NULL); // create a new temp file
+        rewind(temp);
 	
         if((input = gzip_file(temp)) == NULL)
         {
             fprintf(stderr, "Cannot compress archive.\n");
             goto do_error;
         }
+        fclose(temp);
     }
     else
     {
@@ -739,6 +746,13 @@ int kindle_create_main(int argc, char *argv[])
             goto do_error;
         }
     }
+    // write it all to the output
+    if(kindle_create(&info, input, output) < 0)
+    {
+        fprintf(stderr, "Cannot write update to output.\n");
+        goto do_error;
+    }
+    fclose(input);
     fprintf(stderr, "Done.\n");
     return 0;
 do_error:
@@ -746,5 +760,7 @@ do_error:
     for(i = 0; i < info.num_meta; i++)
         free(info.metastrings[i]);
     free(info.metastrings);
+    fclose(temp);
+    fclose(input);
     return -1;
 }
