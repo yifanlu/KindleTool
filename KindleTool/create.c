@@ -600,6 +600,7 @@ int kindle_create_main(int argc, char *argv[])
     }
     argc--; argv++; // next argument
     // arguments
+    optind = -1; // hack to get around the fact that we skipped some arguments
     while((opt = getopt_long(argc, argv, "d:k:b:s:t:1:2:m:c:o:r:x:", opts, &opt_index)) != -1)
     {
         switch(opt)
@@ -738,6 +739,7 @@ int kindle_create_main(int argc, char *argv[])
             goto do_error;
         }
     }
+    fprintf(stderr, "Done.\n");
     return 0;
 do_error:
     free(info.devices);

@@ -30,13 +30,6 @@ FILE *gunzip_file(FILE *input)
         fprintf(stderr, "Cannot read compressed input.\n");
         return NULL;
     }
-    // just to be safe, no compression
-    if(gzsetparams(gz_input, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
-    {
-        fprintf(stderr, "Cannot set compression level for input.\n");
-		gzclose(gz_input);
-        return NULL;
-    }
     // read the input and decompress it
     while((count = (uint32_t)gzread(gz_input, buffer, BUFFER_SIZE)) > 0)
     {
@@ -70,10 +63,12 @@ int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
         fprintf(stderr, "Cannot read input file.\n");
         return -1;
     }
+    fprintf(stderr, "Bundle         %s\n", header.magic_number);
     bundle_version = get_bundle_version(header.magic_number);
     switch(bundle_version)
     {
         case OTAUpdateV2:
+            fprintf(stderr, "Bundle Type    %s\n", "OTA V2");
             return kindle_convert_ota_update_v2(input, output); // no absolutet size, so no struct to pass
             break;
         case UpdateSignature:
@@ -82,20 +77,22 @@ int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
                 fprintf(stderr, "Cannot extract signature file!\n");
                 return -1;
             }
-            kindle_convert(input, output, sig_output);
+            return kindle_convert(input, output, sig_output);
             break;
         case OTAUpdate:
+            fprintf(stderr, "Bundle Type    %s\n", "OTA V1");
             return kindle_convert_ota_update(&header, input, output);
             break;
         case RecoveryUpdate:
+            fprintf(stderr, "Bundle Type    %s\n", "Recovery");
             return kindle_convert_recovery(&header, input, output);
             break;
         case UnknownUpdate:
         default:
+            fprintf(stderr, "Unknown update bundle version!\n");
             break;
     }
-    fprintf(stderr, "Unknown update bundle version!\n");
-    return -1;
+    return -1; // if we get here, there has been an error
 }
 
 int kindle_convert_ota_update_v2(FILE *input, FILE *output)
@@ -299,16 +296,19 @@ int kindle_convert_main(int argc, char *argv[])
     FILE *sig_output;
     const char *in_name;
     char *out_name;
+    int info_only;
 
     sig_output = NULL;
     out_name = NULL;
-    optind = -1;
+    output = NULL;
+    info_only = 0;
+    optind = -1; // hack to get around the fact that we skipped some arguments
     while((opt = getopt_long(argc, argv, "ics:", opts, &opt_index)) != -1)
     {
         switch(opt)
         {
             case 'i':
-                output = NULL;
+                info_only = 1;
                 break;
             case 'c':
                 output = stdout;
@@ -331,7 +331,8 @@ int kindle_convert_main(int argc, char *argv[])
         return -1;
     }
     argc -= (optind-1); argv += optind; // next argument
-    if(output != NULL) // NULL if -i option is set
+    in_name = argv[0];
+    if(!info_only && output == NULL) // not info AND not stdout
     {
         out_name = malloc(strlen(in_name) + 7);
         strcpy(out_name, in_name);
@@ -343,7 +344,6 @@ int kindle_convert_main(int argc, char *argv[])
             return -1;
         }
     }
-    in_name = argv[0];
     if((input = fopen(in_name, "rb")) == NULL)
     {
         fprintf(stderr, "Cannot open input for reading.\n");
@@ -357,9 +357,10 @@ int kindle_convert_main(int argc, char *argv[])
         free(out_name);
         return -1;
     }
-    if(output != stdout && output != NULL) // if output was some file, delete the original
+    if(output != stdout && !info_only) // if output was some file, delete the original
         remove(in_name);
     free(out_name);
+    fprintf(stderr, "Done.\n");
     return 0;
 }
 
@@ -393,14 +394,15 @@ int kindle_extract_main(int argc, char *argv[])
         fprintf(stderr, "Error converting update.\n");
         return -1;
     }
+    rewind(gz_output);
     if((tar_input = gunzip_file(gz_output)) == NULL)
     {
         fprintf(stderr, "Error decompressing update.\n");
         return -1;
     }
-    if(tar_fdopen(&tar, fileno(tar_input), NULL, NULL, O_WRONLY | O_CREAT, 0644, TAR_GNU) < 0)
+    if(tar_fdopen(&tar, fileno(tar_input), NULL, NULL, O_RDONLY, 0644, TAR_GNU) < 0)
     {
-        fprintf(stderr, "Error opening upadte tar.\n");
+        fprintf(stderr, "Error opening update tar.\n");
         return -1;
     }
     if(tar_extract_all(tar, argv[1]) < 0)
@@ -408,5 +410,6 @@ int kindle_extract_main(int argc, char *argv[])
         fprintf(stderr, "Error extracting tar.\n");
         return -1;
     }
+    fprintf(stderr, "Done.\n");
     return 0;
 }
