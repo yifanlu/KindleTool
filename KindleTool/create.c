@@ -88,13 +88,6 @@ FILE *gzip_file(FILE *input)
         fprintf(stderr, "Cannot create temporary file to compress input.\n");
         return NULL;
     }
-    // just to be safe, no compression
-    if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
-    {
-        fprintf(stderr, "Cannot set compression level for input.\n");
-        gzclose(gz_file);
-        return NULL;
-    }
     // read the input and compress it
     while((count = fread(buffer, sizeof(char), BUFFER_SIZE, input)) > 0)
     {
@@ -119,8 +112,8 @@ FILE *gzip_file(FILE *input)
 
 int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_pkey)
 {
-    static char *temp_index = NULL;
-    static char *temp_index_sig = NULL;
+    char temp_index[L_tmpnam];
+    char temp_index_sig[L_tmpnam];
     char *cwd;
     DIR *dir;
     FILE *index_file;
@@ -145,8 +138,7 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
         return -1;
     }
     // create index file
-    temp_index = tmpnam(temp_index);
-    fprintf(stderr, "[D] Temp index: %s\n", temp_index);
+    tmpnam(temp_index);
     if((index_file = fopen(temp_index, "w+")) == NULL)
     {
         fprintf(stderr, "Cannot create index file.\n");
@@ -159,6 +151,7 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
         fprintf(stderr, "Cannot create TAR file.\n");
         chdir((const char*)cwd);
         fclose(index_file);
+        remove(temp_index);
         return -1;
     }
     // sign and add files to tar
@@ -168,12 +161,12 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
         chdir((const char*)cwd);
         fclose(index_file);
         tar_close(tar);
+        remove(temp_index);
         return -1;
     }
     // sign index
     rewind(index_file);
-    temp_index_sig = tmpnam(temp_index_sig);
-    fprintf(stderr, "[D] Temp index sig: %s\n", temp_index_sig);
+    tmpnam(temp_index_sig);
     if((index_sig_file = fopen(temp_index_sig, "wb")) == NULL || sign_file(index_file, rsa_pkey, index_sig_file) < 0)
     {
         fprintf(stderr, "Cannot sign index.\n");
@@ -181,6 +174,7 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
         fclose(index_file);
         fclose(index_sig_file);
         tar_close(tar);
+        remove(temp_index);
         return -1;
     }
     // add index to tar
@@ -191,8 +185,12 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
         fprintf(stderr, "Cannot add index to tar archive.\n");
         chdir((const char*)cwd);
         fclose(index_file);
+        remove(temp_index);
+        remove(temp_index_sig);
         return -1;
     }
+    remove(temp_index);
+    remove(temp_index_sig);
     
     // clean up
     tar_append_eof(tar);
@@ -206,7 +204,7 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
 
 int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE *out_index, TAR *out_tar)
 {
-    static char *temp_sig = NULL;
+    char temp_sig[L_tmpnam];
     size_t pathlen;
 	struct dirent *ent = NULL;
 	struct stat st;
@@ -217,7 +215,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
     FILE *sigfile = NULL;
     char md5[MD5_HASH_LENGTH+1];
 	
-    temp_sig = tmpnam(temp_sig);
+    tmpnam(temp_sig);
 	while ((ent = readdir (dir)) != NULL)
 	{
         pathlen = strlen(dirname) + strlen(ent->d_name);
@@ -255,8 +253,6 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
 		{
 			if(stat(ent->d_name, &st) != 0)
             {
-                if(errno == ENOENT)
-                    continue; // This file has been deleted since the start of the process, ignoring
                 fprintf(stderr, "Cannot get file size for %s.\n", absname);
                 goto on_error;
             }
@@ -284,7 +280,6 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
                 fprintf(stderr, "Cannot create signature file %s\n", signame);
                 goto on_error;
             }
-            fprintf(stderr, "[D] Temp sig: %s\n", temp_sig);
             if(sign_file(file, rsa_pkey_file, sigfile) < 0)
             {
                 fprintf(stderr, "Cannot sign %s\n", absname);
@@ -319,6 +314,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
                 fprintf(stderr, "Cannot add %s to tar archive.\n", signame);
                 goto on_error;
             }
+            remove(temp_sig);
 		}
 	}
 	chdir("..");
@@ -334,6 +330,7 @@ on_error: // Yes, I know GOTOs are bad, but it's more readable than typing what'
         fclose(sigfile);
     if(next != NULL)
         closedir(next);
+    remove(temp_sig);
     return -1;
 }
 
