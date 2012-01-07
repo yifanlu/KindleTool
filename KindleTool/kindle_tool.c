@@ -32,6 +32,7 @@ int munger(FILE *input, FILE *output, size_t length)
 	unsigned char bytes[BUFFER_SIZE];
 	size_t bytes_read;
 	size_t bytes_written;
+    
 	while((bytes_read = fread(bytes, sizeof(char), (length < BUFFER_SIZE && length > 0 ? length : BUFFER_SIZE), input)) > 0)
 	{
 		md(bytes, bytes_read);
@@ -182,31 +183,6 @@ int kindle_print_help(const char *prog_name)
     return 0;
 }
 
-int kindle_deobfuscate_main(int argc, char *argv[])
-{
-    FILE *input;
-    FILE *output;
-    input = stdin;
-    output = stdout;
-    if(argc > 1)
-    {
-        if((output = fopen(argv[1], "wb")) == NULL)
-        {
-            fprintf(stderr, "Cannot open output for writing.\n");
-            return -1;
-        }
-    }
-    if(argc > 0)
-    {
-        if((input = fopen(argv[0], "rb")) == NULL)
-        {
-            fprintf(stderr, "Cannot open input for reading.\n");
-            return -1;
-        }
-    }
-    return munger(input, output, 0);
-}
-
 int kindle_obfuscate_main(int argc, char *argv[])
 {
     FILE *input;
@@ -232,21 +208,56 @@ int kindle_obfuscate_main(int argc, char *argv[])
     return demunger(input, output, 0);
 }
 
+int kindle_deobfuscate_main(int argc, char *argv[])
+{
+    FILE *input;
+    FILE *output;
+    input = stdin;
+    output = stdout;
+    if(argc > 1)
+    {
+        if((output = fopen(argv[1], "wb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open output for writing.\n");
+            return -1;
+        }
+    }
+    if(argc > 0)
+    {
+        if((input = fopen(argv[0], "rb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open input for reading.\n");
+            return -1;
+        }
+    }
+    return munger(input, output, 0);
+}
+
 int main (int argc, char *argv[])
 {
     char *prog_name;
     prog_name = argv[0];
     argc--; argv++; // discard program name for easier parsing
-    if(argc < 2 || strncmp(argv[0], "help", 4) == 0)
+    if(freopen(NULL, "rb", stdin) == NULL)
+    {
+        fprintf(stderr, "Cannot set stdin to binary mode.\n");
+        return -1;
+    }
+    if(freopen(NULL, "wb", stdout) == NULL)
+    {
+        fprintf(stderr, "Cannot set stdout to binary mode.\n");
+        return -1;
+    }
+    if(argc < 1 || strncmp(argv[0], "help", 4) == 0)
         return kindle_print_help(prog_name);
     if(strncmp(argv[0], "dm", 2) == 0)
-        return kindle_deobfuscate_main(argc--, argv++);
+        return kindle_obfuscate_main(--argc, ++argv);
     if(strncmp(argv[0], "md", 2) == 0)
-        return kindle_obfuscate_main(argc--,argv++);
+        return kindle_deobfuscate_main(--argc,++argv);
     if(strncmp(argv[0], "convert", 7) == 0)
-        return kindle_convert_main(argc--, argv++);
+        return kindle_convert_main(--argc, ++argv);
     if(strncmp(argv[0], "extract", 7) == 0)
-	return kindle_extract_main(argc--, argv++);
+	return kindle_extract_main(--argc, ++argv);
     if(strncmp(argv[0], "create", 6) == 0)
-        return kindle_create_main(argc, argv++);
+        return kindle_create_main(--argc, ++argv);
 }

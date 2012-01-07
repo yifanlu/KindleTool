@@ -19,7 +19,7 @@ FILE *gunzip_file(FILE *input)
     // create a temporary file and open
     if(temp_name == NULL)
 	temp_name = tmpnam(temp_name);
-    if((output == fopen(temp_name, "w+b")) == NULL)
+    if((output = fopen(temp_name, "w+b")) == NULL)
     {
 	fprintf(stderr, "Cannot create gunzip output.\n");
 	return NULL;
@@ -31,27 +31,21 @@ FILE *gunzip_file(FILE *input)
         return NULL;
     }
     // just to be safe, no compression
-    if(gzsetparams(gz_file, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
+    if(gzsetparams(gz_input, Z_NO_COMPRESSION, Z_DEFAULT_STRATEGY) != Z_OK)
     {
         fprintf(stderr, "Cannot set compression level for input.\n");
 		gzclose(gz_input);
         return NULL;
     }
     // read the input and decompress it
-    while((count = (uint32_t)gzread(buffer, sizeof(char), BUFFER_SIZE, gz_input)) > 0)
+    while((count = (uint32_t)gzread(gz_input, buffer, BUFFER_SIZE)) > 0)
     {
-        if(fwrite(output, buffer, count) != count)
+        if(fwrite(buffer, sizeof(char), BUFFER_SIZE, output) != count)
         {
             fprintf(stderr, "Cannot decompress input.\n");
 			gzclose(gz_input);
             return NULL;
         }
-    }
-    if(gzerror(gz_input) != 0)
-    {
-        fprintf(stderr, "Error reading input.\n");
-		gzclose(gz_input);
-        return NULL;
     }
     gzclose(gz_input);
     rewind(output);
@@ -100,7 +94,7 @@ int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
         default:
             break;
     }
-    printf("Unknown update bundle version!\n");
+    fprintf(stderr, "Unknown update bundle version!\n");
     return -1;
 }
 
@@ -127,13 +121,13 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     
     source_revision = *(uint64_t *)&data[index];
     index += sizeof(uint64_t);
-    printf("Minimum OTA    %llu\n", source_revision);
+    fprintf(stderr, "Minimum OTA    %llu\n", source_revision);
     target_revision = *(uint64_t *)&data[index];
     index += sizeof(uint64_t);
-    printf("Target OTA     %llu\n", target_revision);
+    fprintf(stderr, "Target OTA     %llu\n", target_revision);
     num_devices = *(uint16_t *)&data[index];
     index += sizeof(uint16_t);
-    printf("Devices        %hd\n", num_devices);
+    fprintf(stderr, "Devices        %hd\n", num_devices);
     free(data);
     
     // Now get the data 
@@ -142,7 +136,7 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     for(index = 0; index < num_devices * sizeof(uint16_t); index += sizeof(uint16_t))
     {
         device = *(uint16_t *)&data[index];
-        printf("Device         %s\n", convert_device_id(device));
+        fprintf(stderr, "Device         %s\n", convert_device_id(device));
     }
     free(data);
     
@@ -153,14 +147,14 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     
     critical = *(uint16_t *)&data[index];
     index += sizeof(uint16_t);
-    printf("Critical       %hd\n", num_devices);
+    fprintf(stderr, "Critical       %hd\n", num_devices);
     md5_sum = &data[index];
     dm((unsigned char*)md5_sum, MD5_HASH_LENGTH);
     index += MD5_HASH_LENGTH;
-    printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, md5_sum);
+    fprintf(stderr, "MD5 Hash       %.*s\n", MD5_HASH_LENGTH, md5_sum);
     num_metadata = *(uint16_t *)&data[index];
     index += sizeof(uint16_t);
-    printf("Metadata       %hd\n", num_metadata);
+    fprintf(stderr, "Metadata       %hd\n", num_metadata);
     free(data);
     
     // Finally, get the metastrings
@@ -169,7 +163,7 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
         fread(&metastring_length, sizeof(uint16_t), 1, input);
         metastring = malloc(metastring_length);
         fread(metastring, sizeof(char), metastring_length, input);
-        printf("Metastring     %.*s\n", metastring_length, metastring);
+        fprintf(stderr, "Metastring     %.*s\n", metastring_length, metastring);
         free(metastring);
     }
     
@@ -181,7 +175,6 @@ int kindle_convert_ota_update_v2(FILE *input, FILE *output)
     
     if(output == NULL)
     {
-        printf("%s\n", "No output found. Exiting.");
         return 0;
     }
     
@@ -203,7 +196,7 @@ int kindle_convert_signature(UpdateHeader *header, FILE *input, FILE *output)
         return -1;
     }
     cert_num = (CertificateNumber)(header->data.signature.certificate_number);
-    printf("Cert number    %u\n", cert_num);
+    fprintf(stderr, "Cert number    %u\n", cert_num);
     switch(cert_num)
     {
         case CertificateDeveloper:
@@ -224,7 +217,7 @@ int kindle_convert_signature(UpdateHeader *header, FILE *input, FILE *output)
             return -1;
             break;
     }
-    printf("Cert file      %s\n", cert_name);
+    fprintf(stderr, "Cert file      %s\n", cert_name);
     if(output == NULL)
     {
         return fseek(input, seek, SEEK_CUR);
@@ -256,15 +249,14 @@ int kindle_convert_ota_update(UpdateHeader *header, FILE *input, FILE *output)
         return -1;
     }
     dm((unsigned char*)header->data.ota_update.md5_sum, MD5_HASH_LENGTH);
-    printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, header->data.ota_update.md5_sum);
-    printf("Minimum OTA    %d\n", header->data.ota_update.source_revision);
-    printf("Target OTA     %d\n", header->data.ota_update.target_revision);
-    printf("Device         %s\n", convert_device_id(header->data.ota_update.device));
-    printf("Optional       %d\n", header->data.ota_update.optional);
+    fprintf(stderr, "MD5 Hash       %.*s\n", MD5_HASH_LENGTH, header->data.ota_update.md5_sum);
+    fprintf(stderr, "Minimum OTA    %d\n", header->data.ota_update.source_revision);
+    fprintf(stderr, "Target OTA     %d\n", header->data.ota_update.target_revision);
+    fprintf(stderr, "Device         %s\n", convert_device_id(header->data.ota_update.device));
+    fprintf(stderr, "Optional       %d\n", header->data.ota_update.optional);
     
     if(output == NULL)
     {
-        printf("%s\n", "No output found. Exiting.");
         return 0;
     }
     
@@ -279,15 +271,14 @@ int kindle_convert_recovery(UpdateHeader *header, FILE *input, FILE *output)
         return -1;
     }
     dm((unsigned char*)header->data.recovery_update.md5_sum, MD5_HASH_LENGTH);
-    printf("MD5 Hash       %.*s\n", MD5_HASH_LENGTH, header->data.recovery_update.md5_sum);
-    printf("Magic 1        %d\n", header->data.recovery_update.magic_1);
-    printf("Magic 2        %d\n", header->data.recovery_update.magic_2);
-    printf("Minor          %d\n", header->data.recovery_update.minor);
-    printf("Device         %s\n", convert_device_id(header->data.recovery_update.device));
+    fprintf(stderr, "MD5 Hash       %.*s\n", MD5_HASH_LENGTH, header->data.recovery_update.md5_sum);
+    fprintf(stderr, "Magic 1        %d\n", header->data.recovery_update.magic_1);
+    fprintf(stderr, "Magic 2        %d\n", header->data.recovery_update.magic_2);
+    fprintf(stderr, "Minor          %d\n", header->data.recovery_update.minor);
+    fprintf(stderr, "Device         %s\n", convert_device_id(header->data.recovery_update.device));
     
     if(output == NULL)
     {
-        printf("%s\n", "No output found. Exiting.");
         return 0;
     }
     
@@ -309,29 +300,9 @@ int kindle_convert_main(int argc, char *argv[])
     const char *in_name;
     char *out_name;
 
-    
-    if(argc < 1)
-    {
-        fprintf(stderr, "No input specified.\n");
-        return -1;
-    }
-    in_name = argv[0];
-    out_name = malloc(strlen(in_name) + 7);
-    strcpy(out_name, in_name);
-    strcat(out_name, ".tar.gz");
-    if((input = fopen(in_name, "rb")) == NULL)
-    {
-        fprintf(stderr, "Cannot open input for reading.\n");
-        free(out_name);
-        return -1;
-    }
-    if((output = fopen(out_name, "wb")) == NULL)
-    {
-        fprintf(stderr, "Cannot open output for writing.\n");
-        free(out_name);
-        return -1;
-    }
     sig_output = NULL;
+    out_name = NULL;
+    optind = -1;
     while((opt = getopt_long(argc, argv, "ics:", opts, &opt_index)) != -1)
     {
         switch(opt)
@@ -349,17 +320,44 @@ int kindle_convert_main(int argc, char *argv[])
                     free(out_name);
                     return -1;
                 }
+                break;
             default:
                 break;
         }
     }
-    if(kindle_convert(input, output, sig_output) < 0)
+    if(argc < 1)
     {
-        fprintf(stderr, "Error converting update.\n");
+        fprintf(stderr, "No input specified.\n");
+        return -1;
+    }
+    argc -= (optind-1); argv += optind; // next argument
+    if(output != NULL) // NULL if -i option is set
+    {
+        out_name = malloc(strlen(in_name) + 7);
+        strcpy(out_name, in_name);
+        strcat(out_name, ".tar.gz");
+        if((output = fopen(out_name, "wb")) == NULL)
+        {
+            fprintf(stderr, "Cannot open output for writing.\n");
+            free(out_name);
+            return -1;
+        }
+    }
+    in_name = argv[0];
+    if((input = fopen(in_name, "rb")) == NULL)
+    {
+        fprintf(stderr, "Cannot open input for reading.\n");
         free(out_name);
         return -1;
     }
-    if(output != stdout)
+    if(kindle_convert(input, output, sig_output) < 0)
+    {
+        fprintf(stderr, "Error converting update.\n");
+        remove(out_name); // clean up our mess
+        free(out_name);
+        return -1;
+    }
+    if(output != stdout && output != NULL) // if output was some file, delete the original
         remove(in_name);
     free(out_name);
     return 0;
@@ -395,7 +393,7 @@ int kindle_extract_main(int argc, char *argv[])
         fprintf(stderr, "Error converting update.\n");
         return -1;
     }
-    if((tar_input = gunzip_file(gz_input)) == NULL)
+    if((tar_input = gunzip_file(gz_output)) == NULL)
     {
         fprintf(stderr, "Error decompressing update.\n");
         return -1;
