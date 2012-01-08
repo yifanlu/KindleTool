@@ -215,7 +215,12 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
         strcat(absname, dirname);
         strcat(absname, ent->d_name);
         absname[pathlen] = 0;
-		if(ent->d_type == DT_DIR)
+        if(stat(ent->d_name, &st) != 0)
+        {
+            fprintf(stderr, "Cannot stat %s.\n", absname);
+            goto on_error;
+        }
+		if(S_ISDIR(st.st_mode))
 		{
 			if(strcmp(ent->d_name, "..") == 0 || strcmp(ent->d_name, ".") == 0)
 			{
@@ -242,11 +247,6 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
 		}
 		else
 		{
-			if(stat(ent->d_name, &st) != 0)
-            {
-                fprintf(stderr, "Cannot get file size for %s.\n", absname);
-                goto on_error;
-            }
             // open file
             if((file = fopen(ent->d_name, "r")) == NULL)
             {
