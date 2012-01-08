@@ -9,6 +9,7 @@
 #ifndef KINDLETOOL
 #define KINDLETOOL
 
+#include <ctype.h>
 #include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -26,9 +27,6 @@
 #include <unistd.h>
 #include <zlib.h>
 
-//#define SWAPENDIAN(x) (((x>>24)&0xff) | ((x<<8)&0xff0000) | ((x>>8)&0xff00) | ((x<<24)&0xff000000))
-#define SWITCHENDIAN(x) (((x>>24)&0xff) | ((x<<8)&0xff0000) | ((x>>8)&0xff00) | ((x<<24)&0xff000000))
-#define SWAPENDIAN(x) (x)
 #define BUFFER_SIZE 1024
 #define BLOCK_SIZE 64
 
@@ -47,6 +45,10 @@
 
 #define INDEX_FILE_NAME "update-filelist.dat"
 #define INDEX_SIG_FILE_NAME "update-filelist.dat.sig"
+
+#define SERIAL_NO_LENGTH 16
+
+#define IS_SCRIPT(filename) (strncmp(filename+(strlen(filename)-4), ".ffs", 4) == 0)
 
 typedef enum {
     UpdateSignature,
@@ -159,6 +161,7 @@ RSA *get_default_key();
 int kindle_print_help(const char *prog_name);
 int kindle_deobfuscate_main(int, char **);
 int kindle_obfuscate_main(int, char **);
+int kindle_info_main(int, char **);
 
 FILE *gunzip_file(FILE *);
 int kindle_read_bundle_header(UpdateHeader *, FILE *);
@@ -170,7 +173,6 @@ int kindle_convert_recovery(UpdateHeader *, FILE *, FILE *);
 int kindle_convert_main(int, char **);
 int kindle_extract_main(int, char **);
 
-int is_script(char *);
 int sign_file(FILE *, RSA *, FILE *);
 FILE *gzip_file(FILE *);
 int kindle_create_tar_from_directory(const char *, FILE *, RSA *);

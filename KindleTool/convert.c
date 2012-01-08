@@ -367,7 +367,6 @@ int kindle_convert_main(int argc, char *argv[])
     fclose(sig_output);
     fclose(output);
     fclose(input);
-    fprintf(stderr, "Done.\n");
     return 0;
 }
 
@@ -430,6 +429,5 @@ int kindle_extract_main(int argc, char *argv[])
     fclose(bin_input);
     fclose(gz_output);
     fclose(tar_input);
-    fprintf(stderr, "Done.\n");
     return 0;
 }

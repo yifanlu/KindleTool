@@ -8,13 +8,6 @@
 
 #include "kindle_tool.h"
 
-int is_script(char *filename)
-{
-    size_t n;
-    n = strlen(filename);
-    return strncmp(filename+(n-4), ".ffs", 4) == 0 || strncmp(filename+(n-3), ".sh", 3) == 0;
-}
-
 int sign_file(FILE *in_file, RSA *rsa_pkey, FILE *sigout_file)
 {
     /* Taken from: http://stackoverflow.com/a/2054412/91422 */
@@ -119,8 +112,6 @@ int kindle_create_tar_from_directory(const char *path, FILE *tar_out, RSA *rsa_p
     FILE *index_file;
     FILE *index_sig_file;
     TAR *tar;
-    
-    fprintf(stderr, "%s\n", path);
     
     // save current directory
     cwd = getcwd(NULL, 0);
@@ -286,7 +277,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
                 goto on_error;
             }
 			// chmod +x if script
-            if(is_script(ent->d_name))
+            if(IS_SCRIPT(ent->d_name))
             {
                 if(chmod(ent->d_name, 0777) < 0)
                 {
@@ -295,7 +286,7 @@ int kindle_sign_and_add_files(DIR *dir, char *dirname, RSA *rsa_pkey_file, FILE 
                 }
             }
 			// add file to index
-            if(fprintf(out_index, "%d %s %s %lld %s\n", (is_script(ent->d_name) ? 129 : 128), md5, absname, st.st_size / BLOCK_SIZE, ent->d_name) < 0)
+            if(fprintf(out_index, "%d %s %s %lld %s\n", (IS_SCRIPT(ent->d_name) ? 129 : 128), md5, absname, st.st_size / BLOCK_SIZE, ent->d_name) < 0)
             {
                 fprintf(stderr, "Cannot write to index file.\n");
                 goto on_error;
@@ -409,9 +400,10 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     index = 0;
     strncpy((char*)header, info->magic_number, MAGIC_NUMBER_LENGTH);
     index += MAGIC_NUMBER_LENGTH;
-    header[index] = (uint64_t)info->source_revision; // source
+    // for some reason long ints must be memcpy'd, setting doesn't work
+    memcpy(&header[index], &info->source_revision, sizeof(uint64_t)); // source
     index += sizeof(uint64_t);
-    header[index] = (uint64_t)info->source_revision; // target
+    memcpy(&header[index], &info->target_revision, sizeof(uint64_t)); // target
     index += sizeof(uint64_t);
     header[index] = (uint16_t)info->num_devices; // device count
     index += sizeof(uint16_t);
@@ -427,6 +419,7 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     
     // part two of the set sized data
     header_size += OTA_UPDATE_V2_PART_2_BLOCK_SIZE;
+    header = realloc(header, header_size);
     header[index] = (uint8_t)info->critical; // critical
     index += sizeof(uint8_t);
     header[index] = (uint8_t)0; // 1 byte padding
@@ -440,7 +433,8 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     rewind(input_tgz); // reset input for later reading
     md(&header[index], MD5_HASH_LENGTH); // obfuscate md5 hash
     index += MD5_HASH_LENGTH;
-    header[index] = (uint16_t)info->num_meta; // num meta
+    memcpy(&header[index], &info->num_meta, sizeof(uint16_t)); // num meta, cannot be casted
+    index += sizeof(uint16_t);
     
     // next, we write the meta strings
     for(i = 0; i < info->num_meta; i++)
@@ -448,8 +442,11 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
         str_len = strlen(info->metastrings[i]);
         header_size += str_len + sizeof(uint16_t);
         header = realloc(header, header_size);
-        header[index] = SWITCHENDIAN(str_len);
-        index += sizeof(uint16_t);
+        // string length: little endian -> big endian
+        header[index] = ((unsigned char*)&str_len)[1];
+        index += sizeof(char);
+        header[index] = ((unsigned char*)&str_len)[0];
+        index += sizeof(char);
         strncpy((char*)&header[index], info->metastrings[i], str_len);
         index += str_len;
     }
@@ -562,9 +559,9 @@ int kindle_create_main(int argc, char *argv[])
         { "cert", required_argument, NULL, 'c' },
         { "opt", required_argument, NULL, 'o' },
         { "crit", required_argument, NULL, 'r' },
-        { "meta", required_argument, NULL, 's' }
+        { "meta", required_argument, NULL, 'x' }
     };
-    UpdateInformation info = {"\0\0\0\0", UnknownUpdate, get_default_key(), 0, 0xFFFFFFFFFFFFFFFF, 0, 0, 0, 0, NULL, CertificateDeveloper, 0, 0, 0, NULL };
+    UpdateInformation info = {"\0\0\0\0", UnknownUpdate, get_default_key(), 0, UINT32_MAX, 0, 0, 0, 0, NULL, CertificateDeveloper, 0, 0, 0, NULL };
     struct stat st_buf;
     FILE *input;
     FILE *temp;
@@ -579,17 +576,17 @@ int kindle_create_main(int argc, char *argv[])
     // update type
     if(argc < 2)
     {
-        fprintf(stderr, "Not enough arguments");
+        fprintf(stderr, "Not enough arguments.\n");
         return -1;
     }
-    if(strncmp(argv[0], "ota", 3) == 0)
+    if(strncmp(argv[0], "ota2", 4) == 0)
+    {
+        info.version = OTAUpdateV2;
+    }
+    else if(strncmp(argv[0], "ota", 3) == 0)
     {
         info.version = OTAUpdate;
         strncpy(info.magic_number, "FC02", 4);
-    }
-    else if(strncmp(argv[0], "ota2", 4) == 0)
-    {
-        info.version = OTAUpdateV2;
     }
     else if(strncmp(argv[0], "recovery", 8) == 0)
     {
@@ -598,7 +595,7 @@ int kindle_create_main(int argc, char *argv[])
     }
     else
     {
-        fprintf(stderr, "Invalid update type.");
+        fprintf(stderr, "Invalid update type.\n");
         return -1;
     }
     argc--; argv++; // next argument
@@ -645,8 +642,8 @@ int kindle_create_main(int argc, char *argv[])
                 }
                 else
                 {
-                    info.num_devices--;
-                    fprintf(stderr, "Unknown device %s, ignoring.\n", optarg);
+                    fprintf(stderr, "Unknown device %s.\n", optarg);
+                    goto do_error;
                 }
                 break;
             case 'k':
@@ -658,12 +655,17 @@ int kindle_create_main(int argc, char *argv[])
                 break;
             case 'b':
                 strncpy(info.magic_number, optarg, 4);
+                if((info.version = get_bundle_version(optarg)) == UnknownUpdate)
+                {
+                    fprintf(stderr, "Invalid bundle version %s.\n", optarg);
+                    goto do_error;
+                }
                 break;
             case 's':
-                info.source_revision = atol(optarg);
+                info.source_revision = strtoul(optarg, NULL, 0);
                 break;
             case 't':
-                info.target_revision = atol(optarg);
+                info.target_revision = strtoul(optarg, NULL, 0);
                 break;
             case '1':
                 info.magic_1 = atoi(optarg);
@@ -684,6 +686,16 @@ int kindle_create_main(int argc, char *argv[])
                 info.critical = (uint16_t)atoi(optarg);
                 break;
             case 'x':
+                if(strchr(optarg, '=') == NULL) // metastring must contain =
+                {
+                    fprintf(stderr, "Invalid metastring. Format: key=value, input: %s\n", optarg);
+                    goto do_error;
+                }
+                if(strlen(optarg) > 0xFFFF)
+                {
+                    fprintf(stderr, "Metastring too long. Max length: %d, input: %s\n", 0xFFFF, optarg);
+                    goto do_error;
+                }
                 info.metastrings = realloc(info.metastrings, ++info.num_meta * sizeof(char*));
                 info.metastrings[info.num_meta-1] = strdup(optarg);
                 break;
@@ -693,6 +705,11 @@ int kindle_create_main(int argc, char *argv[])
     if(info.num_devices < 1 || (info.version != OTAUpdateV2 && info.num_devices > 1))
     {
         fprintf(stderr, "Invalid number of supported devices, %d, for this update type.\n", info.num_devices);
+        goto do_error;
+    }
+    if(info.version != OTAUpdateV2 && (info.source_revision > UINT32_MAX || info.target_revision > UINT32_MAX))
+    {
+        fprintf(stderr, "Source/target revision for this update type cannot exceed %u\n", UINT32_MAX);
         goto do_error;
     }
     argc -= (optind-1); argv += optind; // next argument
@@ -750,7 +767,6 @@ int kindle_create_main(int argc, char *argv[])
         goto do_error;
     }
     fclose(input);
-    fprintf(stderr, "Done.\n");
     return 0;
 do_error:
     free(info.devices);
