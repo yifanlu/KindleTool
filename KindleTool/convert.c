@@ -94,7 +94,7 @@ int kindle_convert(FILE *input, FILE *output, FILE *sig_output)
 
 int kindle_convert_ota_update_v2(FILE *input, FILE *output)
 {
-    void *data;
+    char *data;
     int index;
     uint64_t source_revision;
     uint64_t target_revision;
