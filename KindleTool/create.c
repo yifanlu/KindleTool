@@ -412,7 +412,6 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     index = 0;
     strncpy((char*)header, info->magic_number, MAGIC_NUMBER_LENGTH);
     index += MAGIC_NUMBER_LENGTH;
-    // for some reason long ints must be memcpy'd, setting doesn't work
     memcpy(&header[index], &info->source_revision, sizeof(uint64_t)); // source
     index += sizeof(uint64_t);
     memcpy(&header[index], &info->target_revision, sizeof(uint64_t)); // target
