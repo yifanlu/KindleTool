@@ -1,0 +1,16 @@
+Recommended Compilation Directions
+
+To compile for Linux:
+	1) Install the dependency packages: libtar-dev, libssl-dev, zlib1g-dev
+	2) Compile using "make" in the tool's directory
+	
+To compile for OSX:
+	1) Get MacPorts
+	2) Install the packages: libtar, openssl, zlib
+	3) Open the Xcode 4 project and compile
+	
+To compile for Windows:
+	1) Get Cygwin
+	2) Install the packages: openssl-devel, zlib-devel
+	3) Compile and install libtar
+	4) Compile using "make" in the tool's directory

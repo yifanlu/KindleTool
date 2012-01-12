@@ -417,7 +417,7 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     index += sizeof(uint64_t);
     memcpy(&header[index], &info->target_revision, sizeof(uint64_t)); // target
     index += sizeof(uint64_t);
-    header[index] = (uint16_t)info->num_devices; // device count
+    memcpy(&header[index], &info->num_devices, sizeof(uint16_t)); // device count
     index += sizeof(uint16_t);
     
     // next, we write the devices
@@ -425,16 +425,16 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
     header = realloc(header, header_size);
     for(i = 0; i < info->num_devices; i++)
     {
-        header[index] = (uint16_t)info->devices[i]; // device
+        memcpy(&header[index], &info->devices[i], sizeof(uint16_t)); // device
         index += sizeof(uint16_t);
     }
     
     // part two of the set sized data
     header_size += OTA_UPDATE_V2_PART_2_BLOCK_SIZE;
     header = realloc(header, header_size);
-    header[index] = (uint8_t)info->critical; // critical
+    memcpy(&header[index], &info->critical, sizeof(uint8_t)); // critical
     index += sizeof(uint8_t);
-    header[index] = (uint8_t)0; // 1 byte padding
+    memset(&header[index], 0, sizeof(uint8_t)); // 1 byte padding
     index += sizeof(uint8_t);
     if(md5_sum(input_tgz, (char*)&header[index]) < 0) // md5 hash
     {
@@ -455,10 +455,10 @@ int kindle_create_ota_update_v2(UpdateInformation *info, FILE *input_tgz, FILE *
         header_size += str_len + sizeof(uint16_t);
         header = realloc(header, header_size);
         // string length: little endian -> big endian
-        header[index] = ((unsigned char*)&str_len)[1];
-        index += sizeof(char);
-        header[index] = ((unsigned char*)&str_len)[0];
-        index += sizeof(char);
+        memcpy(&header[index], &((uint8_t*)&str_len)[1], sizeof(uint8_t));
+        index += sizeof(uint8_t);
+        memcpy(&header[index], &((uint8_t*)&str_len)[0], sizeof(uint8_t));
+        index += sizeof(uint8_t);
         strncpy((char*)&header[index], info->metastrings[i], str_len);
         index += str_len;
     }
