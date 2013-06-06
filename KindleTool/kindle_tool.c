@@ -136,7 +136,7 @@ const char *convert_device_id(Device dev)
 
 BundleVersion get_bundle_version(char magic_number[4])
 {
-    if(!strncmp(magic_number, "FB02", 4) || !strncmp(magic_number, "FB01", 4))
+    if(!strncmp(magic_number, "FB03", 4) || !strncmp(magic_number, "FB02", 4) || !strncmp(magic_number, "FB01", 4))
         return RecoveryUpdate;
     else if(!strncmp(magic_number, "FC02", 4) || !strncmp(magic_number, "FD03", 4))
         return OTAUpdate;
